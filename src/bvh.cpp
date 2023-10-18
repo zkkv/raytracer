@@ -109,7 +109,11 @@ uint32_t BVH::nextNodeIdx()
 // This method is unit-tested, so do not change the function signature.
 AxisAlignedBox computePrimitiveAABB(const BVHInterface::Primitive primitive)
 {
-    return { .lower = glm::vec3(0), .upper = glm::vec3(0) };
+    return
+    {
+        .lower = glm::min(glm::min(primitive.v0.position, primitive.v1.position), primitive.v2.position), 
+        .upper = glm::max(glm::max(primitive.v0.position, primitive.v1.position), primitive.v2.position)
+    };
 }
 
 // TODO: Standard feature

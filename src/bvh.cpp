@@ -287,8 +287,16 @@ bool intersectRayWithBVH(RenderState& state, const BVHInterface& bvh, Ray& ray, 
 // - primitives; the range of triangles to be stored for this leaf
 BVH::Node BVH::buildLeafData(const Scene& scene, const Features& features, const AxisAlignedBox& aabb, std::span<Primitive> primitives)
 {
+    // TODO: Test
+    // TODO: What is primitiveOffset? (using meshID for now)
+    // TODO: Why would I need scene and features??
+
     Node node;
     // TODO fill in the leaf's data; refer to `bvh_interface.h` for details
+
+    node.aabb = aabb;
+    node.data[0] = primitives[0].meshID | BVH::Node::LeafBit; 
+    node.data[1] = primitives.size();
 
     // Copy the current set of primitives to the back of the primitives vector
     std::copy(primitives.begin(), primitives.end(), std::back_inserter(m_primitives));

@@ -159,6 +159,7 @@ glm::vec3 computePrimitiveCentroid(const BVHInterface::Primitive primitive)
 // This method is unit-tested, so do not change the function signature.
 uint32_t computeAABBLongestAxis(const AxisAlignedBox& aabb)
 {
+    // TODO: Test
     // TODO: optimize (if possible)
     // TODO: make sure the boundaries checks make sense
     const glm::vec3 axes = glm::abs(aabb.upper - aabb.lower);
@@ -182,9 +183,34 @@ uint32_t computeAABBLongestAxis(const AxisAlignedBox& aabb)
 // This method is unit-tested, so do not change the function signature.
 size_t splitPrimitivesByMedian(const AxisAlignedBox& aabb, uint32_t axis, std::span<BVHInterface::Primitive> primitives)
 {
+    // TODO: Test
+    // TODO: why is aabb passed as a parameter?
     using Primitive = BVHInterface::Primitive;
 
-    return 0; // This is clearly not the solution
+    if (axis == 0)
+    {
+        std::sort(primitives.front(), primitives.back(), [](const Primitive& a, const Primitive& b) 
+        { 
+            return computePrimitiveCentroid(a).x < computePrimitiveCentroid(b).x; 
+        });
+    }
+    else if (axis == 1)
+    {
+        std::sort(primitives.front(), primitives.back(), [](const Primitive& a, const Primitive& b) 
+        {
+            return computePrimitiveCentroid(a).y < computePrimitiveCentroid(b).y;
+        });
+    }
+    else
+    {
+        std::sort(primitives.front(), primitives.back(), [](const Primitive& a, const Primitive& b) 
+        {
+            return computePrimitiveCentroid(a).z < computePrimitiveCentroid(b).z;
+        });
+    }
+    
+    // Element at this position always goes to the second half to ensure the splitting condition is met
+    return (primitives.size() + 1) / 2;
 }
 
 // TODO: Standard feature

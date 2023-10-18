@@ -288,7 +288,7 @@ bool intersectRayWithBVH(RenderState& state, const BVHInterface& bvh, Ray& ray, 
 BVH::Node BVH::buildLeafData(const Scene& scene, const Features& features, const AxisAlignedBox& aabb, std::span<Primitive> primitives)
 {
     // TODO: Test
-    // TODO: What is primitiveOffset? (using meshID for now)
+    // TODO: What is primitiveOffset? Clue: the offset is the position of the primitive in the m_primitives
     // TODO: Why would I need scene and features??
     // TODO: Not completely sure if offset can be more than 31 bits long
 
@@ -296,7 +296,7 @@ BVH::Node BVH::buildLeafData(const Scene& scene, const Features& features, const
     // TODO fill in the leaf's data; refer to `bvh_interface.h` for details
 
     node.aabb = aabb;
-    node.data[0] = primitives[0].meshID | BVH::Node::LeafBit; 
+    node.data[0] = m_primitives.size() | BVH::Node::LeafBit; 
     node.data[1] = primitives.size();
 
     // Copy the current set of primitives to the back of the primitives vector

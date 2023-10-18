@@ -159,7 +159,15 @@ glm::vec3 computePrimitiveCentroid(const BVHInterface::Primitive primitive)
 // This method is unit-tested, so do not change the function signature.
 uint32_t computeAABBLongestAxis(const AxisAlignedBox& aabb)
 {
-    return 0;
+    // TODO: optimize (if possible)
+    // TODO: make sure the boundaries checks make sense
+    const glm::vec3 axes = glm::abs(aabb.upper - aabb.lower);
+    if (axes.x >= axes.y && axes.x >= axes.z)
+        return 0;
+    else if (axes.y >= axes.x && axes.y >= axes.z)
+        return 1;
+    else
+        return 2;
 }
 
 // TODO: Standard feature

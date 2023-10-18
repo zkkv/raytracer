@@ -59,8 +59,15 @@ glm::vec3 computeShading(RenderState& state, const glm::vec3& cameraDirection, c
 // from the light, evaluate a Lambertian diffuse shading, returning the reflected light towards the target.
 glm::vec3 computeLambertianModel(RenderState& state, const glm::vec3& cameraDirection, const glm::vec3& lightDirection, const glm::vec3& lightColor, const HitInfo& hitInfo)
 {
-    // Implement basic diffuse shading if you wish to use it
-    return sampleMaterialKd(state, hitInfo);
+    glm::vec3 l = glm::normalize(lightDirection);
+    glm::vec3 n = glm::normalize(hitInfo.normal);
+
+    float dot = glm::dot(l, n);
+
+    if (dot <= 0)
+        return glm::vec3 { 0 };
+
+    return sampleMaterialKd(state, hitInfo) * lightColor * dot;
 }
 
 // TODO: Standard feature
@@ -80,8 +87,34 @@ glm::vec3 computeLambertianModel(RenderState& state, const glm::vec3& cameraDire
 // This method is unit-tested, so do not change the function signature.
 glm::vec3 computePhongModel(RenderState& state, const glm::vec3& cameraDirection, const glm::vec3& lightDirection, const glm::vec3& lightColor, const HitInfo& hitInfo)
 {
-    // TODO: Implement phong shading
-    return sampleMaterialKd(state, hitInfo) * lightColor;
+    // No ambient, diffuse = Lambertian, so only calculate specular  
+    
+    glm::vec3 diffuse = computeLambertianModel(state, cameraDirection, lightDirection, lightColor, hitInfo);
+
+    glm::vec3 d = glm::normalize(-lightDirection);
+    glm::vec3 n = glm::normalize(hitInfo.normal);
+
+    float dot = glm::dot(-d, n);
+
+    if (dot <= 0)
+        return glm::vec3 { 0 };
+
+    glm::vec3 v = glm::normalize(cameraDirection);
+    glm::vec3 r = glm::normalize(d - 2.0f * glm::dot(d, n) * n);
+
+    float VdotR = glm::dot(v, r);
+
+    if (VdotR <= 0)
+        return glm::vec3 { 0 };
+
+    float pow = glm::pow(VdotR, hitInfo.material.shininess);
+
+    glm::vec3 specular = pow * hitInfo.material.ks * lightColor;
+
+    return diffuse + specular;
+
+    //return sampleMaterialKd(state, hitInfo) * lightColor;
+    return glm::vec3 { 0 };
 }
 
 // TODO: Standard feature
@@ -101,8 +134,32 @@ glm::vec3 computePhongModel(RenderState& state, const glm::vec3& cameraDirection
 // This method is unit-tested, so do not change the function signature.
 glm::vec3 computeBlinnPhongModel(RenderState& state, const glm::vec3& cameraDirection, const glm::vec3& lightDirection, const glm::vec3& lightColor, const HitInfo& hitInfo)
 {
-    // TODO: Implement blinn-phong shading
-    return sampleMaterialKd(state, hitInfo) * lightColor;
+    // Similarly to computePhongModel(), only the specular is needed here
+
+    glm::vec3 diffuse = computeLambertianModel(state, cameraDirection, lightDirection, lightColor, hitInfo);
+
+    glm::vec3 d = glm::normalize(lightDirection);
+    glm::vec3 n = glm::normalize(hitInfo.normal);
+    float dot = glm::dot(n, d);
+
+    if (dot <= 0)
+        return glm::vec3 { 0 };
+
+    glm::vec3 h = glm::normalize(d + cameraDirection);
+
+    float NdotH = glm::dot(n, h);
+
+    if (NdotH <= 0)
+        return glm::vec3 { 0 };
+
+    float pow = glm::pow(NdotH, hitInfo.material.shininess);
+
+    glm::vec3 specular = pow * hitInfo.material.ks * lightColor;
+
+    // return diffuse + specular;
+
+    // return sampleMaterialKd(state, hitInfo) * lightColor;
+    return glm::vec3 { 0 };
 }
 
 // TODO: Standard feature
@@ -114,7 +171,27 @@ glm::vec3 computeBlinnPhongModel(RenderState& state, const glm::vec3& cameraDire
 // This method is unit-tested, so do not change the function signature.
 glm::vec3 LinearGradient::sample(float ti) const
 {
-    return glm::vec3(0.5f);
+    if (components[0].t > ti)
+        return components[0].color;
+
+    for (int i = 0; i < components.size() - 1; i++)
+    {   
+        if (std::fabs(components[i].t - ti) <= 1e-6f) // ti is on a boundary
+            return components[i].color;
+
+        if (components[i].t < ti && components[i + 1].t > ti)
+        {
+            float tLeft = components[i].t;
+            float tRight = components[i + 1].t;
+            glm::vec3 colorLeft = components[i].color;
+            glm::vec3 colorRight = components[i + 1].color;
+
+            float alpha = (ti - tLeft) / (tRight - tLeft);
+            return (1.0f - alpha) * colorLeft + alpha * colorRight;
+        }
+    }
+
+    return components[components.size() - 1].color;
 }
 
 // TODO: Standard feature
@@ -134,6 +211,7 @@ glm::vec3 LinearGradient::sample(float ti) const
 // This method is unit-tested, so do not change the function signature.
 glm::vec3 computeLinearGradientModel(RenderState& state, const glm::vec3& cameraDirection, const glm::vec3& lightDirection, const glm::vec3& lightColor, const HitInfo& hitInfo, const LinearGradient& gradient)
 {
-    float cos_theta = glm::dot(lightDirection, hitInfo.normal);
-    return glm::vec3(0.f);
+    float cos_theta = glm::dot(glm::normalize(lightDirection), glm::normalize(hitInfo.normal));
+    glm::vec3 sampledColor = gradient.sample(cos_theta);
+    return lightColor * sampledColor;
 }

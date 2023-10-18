@@ -189,21 +189,21 @@ size_t splitPrimitivesByMedian(const AxisAlignedBox& aabb, uint32_t axis, std::s
 
     if (axis == 0)
     {
-        std::sort(primitives.front(), primitives.back(), [](const Primitive& a, const Primitive& b) 
+        std::sort(primitives.begin(), primitives.end(), [](const Primitive& a, const Primitive& b) 
         { 
             return computePrimitiveCentroid(a).x < computePrimitiveCentroid(b).x; 
         });
     }
     else if (axis == 1)
     {
-        std::sort(primitives.front(), primitives.back(), [](const Primitive& a, const Primitive& b) 
+        std::sort(primitives.begin(), primitives.end(), [](const Primitive& a, const Primitive& b) 
         {
             return computePrimitiveCentroid(a).y < computePrimitiveCentroid(b).y;
         });
     }
     else
     {
-        std::sort(primitives.front(), primitives.back(), [](const Primitive& a, const Primitive& b) 
+        std::sort(primitives.begin(), primitives.end(), [](const Primitive& a, const Primitive& b) 
         {
             return computePrimitiveCentroid(a).z < computePrimitiveCentroid(b).z;
         });

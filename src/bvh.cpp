@@ -109,6 +109,7 @@ uint32_t BVH::nextNodeIdx()
 // This method is unit-tested, so do not change the function signature.
 AxisAlignedBox computePrimitiveAABB(const BVHInterface::Primitive primitive)
 {
+    // TODO: Test
     return
     {
         .lower = glm::min(glm::min(primitive.v0.position, primitive.v1.position), primitive.v2.position), 
@@ -123,6 +124,9 @@ AxisAlignedBox computePrimitiveAABB(const BVHInterface::Primitive primitive)
 // This method is unit-tested, so do not change the function signature.
 AxisAlignedBox computeSpanAABB(std::span<const BVHInterface::Primitive> primitives)
 {
+    // TODO: Test
+    // TODO: See if size can be < 1
+    // TODO: optimize
     if (primitives.size() < 1) return {};
 
     glm::vec3 lower(std::numeric_limits<float>::max());
@@ -144,7 +148,7 @@ AxisAlignedBox computeSpanAABB(std::span<const BVHInterface::Primitive> primitiv
 // This method is unit-tested, so do not change the function signature.
 glm::vec3 computePrimitiveCentroid(const BVHInterface::Primitive primitive)
 {
-    return glm::vec3(0);
+    return (primitive.v0.position + primitive.v1.position + primitive.v2.position) / 3.0f;
 }
 
 // TODO: Standard feature

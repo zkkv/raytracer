@@ -290,6 +290,7 @@ BVH::Node BVH::buildLeafData(const Scene& scene, const Features& features, const
     // TODO: Test
     // TODO: What is primitiveOffset? (using meshID for now)
     // TODO: Why would I need scene and features??
+    // TODO: Not completely sure if offset can be more than 31 bits long
 
     Node node;
     // TODO fill in the leaf's data; refer to `bvh_interface.h` for details
@@ -315,8 +316,14 @@ BVH::Node BVH::buildLeafData(const Scene& scene, const Features& features, const
 // - rightChildIndex; the index of the node's right child in `m_nodes`
 BVH::Node BVH::buildNodeData(const Scene& scene, const Features& features, const AxisAlignedBox& aabb, uint32_t leftChildIndex, uint32_t rightChildIndex)
 {
+    // TODO: Test
+    // TODO: See buildLeafData() for other questions
     Node node;
     // TODO fill in the node's data; refer to `bvh_interface.h` for details
+
+    node.aabb = aabb;
+    node.data[0] = leftChildIndex;
+    node.data[1] = rightChildIndex;
     return node;
 }
 

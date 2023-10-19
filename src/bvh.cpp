@@ -13,6 +13,11 @@
 #include <iostream>
 
 
+void printVector(const glm::vec3& vector, const std::string& str = "")
+{
+    std::cout << str << "(" << vector.x << ", " << vector.y << ", " << vector.z << ")" << std::endl;
+}
+
 // Helper method to fill in hitInfo object. This can be safely ignored (or extended).
 // Note: many of the functions in this helper tie in to standard/extra features you will have
 // to implement separately, see interpolate.h/.cpp for these parts of the project
@@ -437,7 +442,32 @@ void BVH::buildRecursive(const Scene& scene, const Features& features, std::span
 // You are free to modify this function's signature, as long as the constructor builds a BVH
 void BVH::buildNumLevels()
 {
-    m_numLevels = 1;
+    std::list<BVHInterface::Node> queue;
+    queue.push_back(m_nodes[0]);
+
+    int currentLevel = 0;
+
+    while (!queue.empty()) 
+    {
+        size_t nNodesAtLevel = queue.size();
+
+        while (nNodesAtLevel > 0) 
+        {
+            const auto& currentNode = queue.front();
+
+            if (!currentNode.isLeaf())
+            {
+                queue.push_back(m_nodes[currentNode.leftChild()]);
+                queue.push_back(m_nodes[currentNode.rightChild()]);
+            }
+
+            nNodesAtLevel--;
+            queue.pop_front();
+        }
+
+        currentLevel++;
+    }
+    m_numLevels = currentLevel;
 }
 
 // Compute the nr. of leaves in your hierarchy after construction; useful for `debugDrawLeaf()`
@@ -453,11 +483,47 @@ void BVH::buildNumLeaves()
 // You are free to modify this function's signature.
 void BVH::debugDrawLevel(int level)
 {
+    // TODO: Test
+
     // Example showing how to draw an AABB as a (white) wireframe box.
     // Hint: use draw functions (see `draw.h`) to draw the contained boxes with different
     // colors, transparencies, etc.
-    AxisAlignedBox aabb { .lower = glm::vec3(0.0f), .upper = glm::vec3(0.0f, 1.05f, 1.05f) };
-    drawAABB(aabb, DrawMode::Wireframe, glm::vec3(0.05f, 1.0f, 0.05f), 0.1f);
+
+    std::list<BVHInterface::Node> queue;
+    queue.push_back(m_nodes[0]);
+
+    int currentLevel = 0;
+    while (!queue.empty())
+    {
+        if (currentLevel == level) 
+        {
+            break;
+        }
+
+        size_t nNodesAtLevel = queue.size();
+
+        while (nNodesAtLevel > 0) 
+        {
+            const auto& currentNode = queue.front();
+
+            if (!currentNode.isLeaf()) 
+            {
+                queue.push_back(m_nodes[currentNode.leftChild()]);
+                queue.push_back(m_nodes[currentNode.rightChild()]);
+            }
+
+            nNodesAtLevel--;
+            queue.pop_front();
+        }
+        currentLevel++;
+    }
+
+    while (!queue.empty())
+    {
+        const auto& currentNode = queue.front();
+        drawAABB(currentNode.aabb, DrawMode::Wireframe, glm::vec3(1.0f, 1.0f, 1.0f), 0.6f);
+        queue.pop_front();
+    }
 }
 
 // Draw data of the leaf at the selected index. Use this function to visualize leaf nodes

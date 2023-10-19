@@ -24,9 +24,8 @@ DISABLE_WARNINGS_POP()
 // This method is unit-tested, so do not change the function signature.
 void sampleSegmentLight(const float& sample, const SegmentLight& light, glm::vec3& position, glm::vec3& color)
 {
-    // TODO: implement this function.
-    position = glm::vec3(0.0);
-    color = glm::vec3(0.0);
+    position = light.endpoint0 + sample * (light.endpoint1 - light.endpoint0);
+    color = light.color0 + sample * (light.color1 - light.color0);
 }
 
 // TODO: Standard feature
@@ -40,9 +39,15 @@ void sampleSegmentLight(const float& sample, const SegmentLight& light, glm::vec
 // This method is unit-tested, so do not change the function signature.
 void sampleParallelogramLight(const glm::vec2& sample, const ParallelogramLight& light, glm::vec3& position, glm::vec3& color)
 {
-    // TODO: implement this function.
-    position = glm::vec3(0.0);
-    color = glm::vec3(0.0);
+    position = light.v0 + sample[0] * light.edge01 + sample[1] * light.edge02;
+
+    // Since sample is between (0,0), (1,1), we can treat the light as a unit square, with our sampled point at coordinates (sample[0], sample[1])
+    float a0 = (1.0f - sample[0]) * (1.0f - sample[1]);
+    float a1 = (1.0f - sample[0]) * sample[1];
+    float a2 = sample[0] * (1.0f - sample[1]);
+    float a3 = sample[0] * sample[1];
+
+    color = a0 * light.color0 + a1 * light.color1 + a2 * light.color2 + a3 * light.color3;
 }
 
 // TODO: Standard feature

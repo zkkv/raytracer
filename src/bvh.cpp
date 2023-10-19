@@ -381,11 +381,15 @@ BVH::Node BVH::buildNodeData(const Scene& scene, const Features& features, const
 // You are free to modify this function's signature, as long as the constructor builds a BVH
 void BVH::buildRecursive(const Scene& scene, const Features& features, std::span<Primitive> primitives, uint32_t nodeIndex)
 {
+    // TODO: Test
+    // TODO: Optimize
+    // TODO: Feature-based splitting (EXTRA FEATURE)
+
     // WARNING: always use nodeIndex to index into the m_nodes array. never hold a reference/pointer,
     // because a push/emplace (in ANY recursive calls) might grow vectors, invalidating the pointers.
 
     // Compute the AABB of the current node.
-    AxisAlignedBox aabb = computeSpanAABB(primitives);
+    //AxisAlignedBox aabb = computeSpanAABB(primitives);
 
     // As a starting point, we provide an implementation which creates a single leaf, and stores
     // all triangles inside it. You should remove or comment this, and work on your own recursive
@@ -404,8 +408,28 @@ void BVH::buildRecursive(const Scene& scene, const Features& features, std::span
     //    3d. Recursively build left/right child nodes over their respective triangles
     //        (hint; use `std::span::subspan()` to split into left/right ranges)
 
+    const boolean shouldBeLeaf = primitives.size() <= BVH::LeafSize;
+    const AxisAlignedBox& aabb = computeSpanAABB(primitives);
+    if (shouldBeLeaf)
+    {
+        m_nodes[nodeIndex] = buildLeafData(scene, features, aabb, primitives);
+        std::copy(primitives.begin(), primitives.end(), std::back_inserter(m_primitives));
+    }
+    else
+    {
+        const size_t leftChild = nextNodeIdx();
+        const size_t rightChild = nextNodeIdx();
+        m_nodes[nodeIndex] = buildNodeData(scene, features, aabb, leftChild, rightChild);
+        const size_t splitIndex = splitPrimitivesByMedian(aabb, computeAABBLongestAxis(aabb), primitives);
+        const auto& leftSubspan = primitives.subspan(0, splitIndex);
+        const auto& rightSubspan = primitives.subspan(splitIndex, primitives.size() - splitIndex);
+
+        buildRecursive(scene, features, leftSubspan, leftChild);
+        buildRecursive(scene, features, rightSubspan, rightChild);
+    }
+
     // Just configure the current node as a giant leaf for now
-    m_nodes[nodeIndex] = buildLeafData(scene, features, aabb, primitives);
+    //m_nodes[nodeIndex] = buildLeafData(scene, features, aabb, primitives);
 }
 
 // TODO: Standard feature, or part of it

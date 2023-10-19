@@ -558,6 +558,8 @@ void BVH::debugDrawLeaf(int leafIndex)
     // TODO: Test
     // TODO: Optimize
     
+    const bool COLOR_TRIANGLES = true;
+
     if (leafIndex < 1 || leafIndex > m_numLeaves) return;
 
     std::list<BVHInterface::Node> queue;
@@ -590,4 +592,20 @@ void BVH::debugDrawLeaf(int leafIndex)
     }
     const auto& leaf = queue.front();
     drawAABB(leaf.aabb, DrawMode::Wireframe, glm::vec3(0.05f, 1.0f, 0.05f), 0.6f);
+
+    if (COLOR_TRIANGLES) 
+    {
+        std::array<glm::vec3, 6> colors;
+        colors[0] = glm::vec3(0.67f, 0.05f, 0.9f); // Purple
+        colors[1] = glm::vec3(0.9f, 0.6f, 0.05f);  // Orange
+        colors[2] = glm::vec3(0.05f, 0.05f, 0.9f); // Blue
+        colors[3] = glm::vec3(0.9f, 0.9f, 0.05f);  // Yellow
+        colors[4] = glm::vec3(0.05f, 0.95f, 1.0f); // Cyan
+        colors[5] = glm::vec3(0.95f, 0.05f, 0.6f); // Pink
+        int c = 0;
+
+        for (int i = leaf.primitiveOffset(); i < leaf.primitiveOffset() + leaf.primitiveCount(); i++) {
+            drawTriangle(m_primitives[i].v0, m_primitives[i].v1, m_primitives[i].v2, colors[c++ % 6]);
+        }
+    }
 }

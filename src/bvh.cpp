@@ -234,6 +234,10 @@ size_t splitPrimitivesByMedian(const AxisAlignedBox& aabb, uint32_t axis, std::s
 // This method is unit-tested, so do not change the function signature.
 bool intersectRayWithBVH(RenderState& state, const BVHInterface& bvh, Ray& ray, HitInfo& hitInfo)
 {
+    // TODO: Test
+    // TODO: Optimize by reducing the number of intermediate variables
+    // (!) TODO: first push child with smaller t
+
     // Relevant data in the constructed BVH
     std::span<const BVHInterface::Node> nodes = bvh.nodes();
     std::span<const BVHInterface::Primitive> primitives = bvh.primitives();
@@ -258,6 +262,36 @@ bool intersectRayWithBVH(RenderState& state, const BVHInterface& bvh, Ray& ray, 
         //
         // Note that it is entirely possible for a ray to hit a leaf node, but not its primitives,
         // and it is likewise possible for a ray to hit both children of a node.
+        std::list<BVHInterface::Node> stack;
+        stack.push_back(nodes[0]);
+
+        while (!stack.empty())
+        {
+            const auto& currentNode = stack.back();
+            stack.pop_back();
+
+            const bool hasIntersection = intersectRayWithShape(currentNode.aabb, ray);
+            if (!hasIntersection) {
+                continue;
+            }
+
+            // (!) TODO: first push child with smaller t
+            if (!currentNode.isLeaf())
+            {
+                stack.push_back(nodes[currentNode.leftChild()]);
+                stack.push_back(nodes[currentNode.rightChild()]);
+            } 
+            else
+            {
+
+                for (int i = currentNode.primitiveOffset(); i < currentNode.primitiveOffset() + currentNode.primitiveCount(); i++)
+                {
+                    const auto& primitive = primitives[i];
+                    intersectRayWithTriangle(primitive.v0.position, primitive.v1.position, primitive.v2.position, ray, hitInfo);
+                }
+            }
+        }
+
     } else {
         // Naive implementation; simply iterates over all primitives
         for (const auto& prim : primitives) {

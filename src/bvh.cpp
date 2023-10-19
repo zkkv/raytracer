@@ -287,7 +287,10 @@ bool intersectRayWithBVH(RenderState& state, const BVHInterface& bvh, Ray& ray, 
                 for (int i = currentNode.primitiveOffset(); i < currentNode.primitiveOffset() + currentNode.primitiveCount(); i++)
                 {
                     const auto& primitive = primitives[i];
-                    intersectRayWithTriangle(primitive.v0.position, primitive.v1.position, primitive.v2.position, ray, hitInfo);
+                    if (intersectRayWithTriangle(primitive.v0.position, primitive.v1.position, primitive.v2.position, ray, hitInfo)) {
+                        updateHitInfo(state, primitive, ray, hitInfo);
+                        is_hit = true;
+                    }
                 }
             }
         }

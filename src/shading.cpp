@@ -97,7 +97,7 @@ glm::vec3 computePhongModel(RenderState& state, const glm::vec3& cameraDirection
     float dot = glm::dot(-d, n);
 
     if (dot <= 0)
-        return glm::vec3 { 0 };
+        return diffuse;
 
     glm::vec3 v = glm::normalize(cameraDirection);
     glm::vec3 r = glm::normalize(d - 2.0f * glm::dot(d, n) * n);
@@ -105,16 +105,13 @@ glm::vec3 computePhongModel(RenderState& state, const glm::vec3& cameraDirection
     float VdotR = glm::dot(v, r);
 
     if (VdotR <= 0)
-        return glm::vec3 { 0 };
+        return diffuse;
 
     float pow = glm::pow(VdotR, hitInfo.material.shininess);
 
     glm::vec3 specular = pow * hitInfo.material.ks * lightColor;
 
     return diffuse + specular;
-
-    //return sampleMaterialKd(state, hitInfo) * lightColor;
-    return glm::vec3 { 0 };
 }
 
 // TODO: Standard feature
@@ -143,23 +140,20 @@ glm::vec3 computeBlinnPhongModel(RenderState& state, const glm::vec3& cameraDire
     float dot = glm::dot(n, d);
 
     if (dot <= 0)
-        return glm::vec3 { 0 };
+        return diffuse;
 
     glm::vec3 h = glm::normalize(d + cameraDirection);
 
     float NdotH = glm::dot(n, h);
 
     if (NdotH <= 0)
-        return glm::vec3 { 0 };
+        return diffuse;
 
     float pow = glm::pow(NdotH, hitInfo.material.shininess);
 
     glm::vec3 specular = pow * hitInfo.material.ks * lightColor;
 
-    // return diffuse + specular;
-
-    // return sampleMaterialKd(state, hitInfo) * lightColor;
-    return glm::vec3 { 0 };
+    return diffuse + specular;
 }
 
 // TODO: Standard feature

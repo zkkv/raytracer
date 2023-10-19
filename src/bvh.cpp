@@ -445,7 +445,7 @@ void BVH::buildNumLevels()
     std::list<BVHInterface::Node> queue;
     queue.push_back(m_nodes[0]);
 
-    int currentLevel = 0;
+    uint32_t currentLevel = 0;
 
     while (!queue.empty()) 
     {
@@ -474,7 +474,28 @@ void BVH::buildNumLevels()
 // You are free to modify this function's signature, as long as the constructor builds a BVH
 void BVH::buildNumLeaves()
 {
-    m_numLeaves = 1;
+    std::list<BVHInterface::Node> queue;
+    queue.push_back(m_nodes[0]);
+
+    uint32_t nLeaves = 0;
+
+    while (!queue.empty()) 
+    {
+        const auto& currentNode = queue.front();
+
+        if (currentNode.isLeaf())
+        {
+            nLeaves++;
+        } 
+        else 
+        {
+            queue.push_back(m_nodes[currentNode.leftChild()]);
+            queue.push_back(m_nodes[currentNode.rightChild()]);
+        }
+
+        queue.pop_front();
+    }
+    m_numLeaves = nLeaves;
 }
 
 // Draw the bounding boxes of the nodes at the selected level. Use this function to visualize nodes
@@ -534,8 +555,39 @@ void BVH::debugDrawLevel(int level)
 // You are free to modify this function's signature.
 void BVH::debugDrawLeaf(int leafIndex)
 {
-    // Example showing how to draw an AABB as a (white) wireframe box.
-    // Hint: use drawTriangle (see `draw.h`) to draw the contained primitives
-    AxisAlignedBox aabb { .lower = glm::vec3(0.0f), .upper = glm::vec3(0.0f, 1.05f, 1.05f) };
-    drawAABB(aabb, DrawMode::Wireframe, glm::vec3(0.05f, 1.0f, 0.05f), 0.1f);
+    // TODO: Test
+    // TODO: Optimize
+    
+    if (leafIndex < 1 || leafIndex > m_numLeaves) return;
+
+    std::list<BVHInterface::Node> queue;
+    queue.push_back(m_nodes[0]);
+
+    int currentIndex = 1;
+
+    while (!queue.empty()) 
+    {
+        const auto& currentNode = queue.front();
+
+        if (currentNode.isLeaf()) 
+        {
+            if (currentIndex == leafIndex)
+            {
+                break;
+            } 
+            else 
+            {
+                currentIndex++;
+            }
+        } 
+        else 
+        {
+            queue.push_back(m_nodes[currentNode.leftChild()]);
+            queue.push_back(m_nodes[currentNode.rightChild()]);
+        }
+
+        queue.pop_front();
+    }
+    const auto& leaf = queue.front();
+    drawAABB(leaf.aabb, DrawMode::Wireframe, glm::vec3(0.05f, 1.0f, 0.05f), 0.6f);
 }

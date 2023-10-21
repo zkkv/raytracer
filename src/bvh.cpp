@@ -460,11 +460,22 @@ void BVH::buildRecursive(const Scene& scene, const Features& features, std::span
         const uint32_t rightChild = nextNodeIdx();
         m_nodes[nodeIndex] = buildNodeData(scene, features, aabb, leftChild, rightChild);
 
-        const size_t splitIndex = splitPrimitivesByMedian(aabb, computeAABBLongestAxis(aabb), primitives);
+        size_t splitIndex;
+
+        if (features.extra.enableBvhSahBinning)
+        {
+            splitIndex = splitPrimitivesBySAHBin(aabb, computeAABBLongestAxis(aabb), primitives);
+        } 
+        else 
+        {
+            splitIndex = splitPrimitivesByMedian(aabb, computeAABBLongestAxis(aabb), primitives);
+        }
+
 
         buildRecursive(scene, features, primitives.subspan(0, splitIndex), leftChild);
         buildRecursive(scene, features, primitives.subspan(splitIndex, primitives.size() - splitIndex), rightChild);
     }
+    return;
 }
 
 // TODO: Standard feature, or part of it

@@ -4,6 +4,7 @@
 #include "recursive.h"
 #include "shading.h"
 #include <framework/trackball.h>
+#include <iostream>
 
 // TODO; Extra feature
 // Given the same input as for `renderImage()`, instead render an image with your own implementation
@@ -84,6 +85,16 @@ glm::vec3 sampleEnvironmentMap(RenderState& state, Ray ray)
     }
 }
 
+float calculateAABBSurfaceArea(const AxisAlignedBox& aabb)
+{
+    // TODO: Test
+    // TODO: make simpler
+    const glm::vec3 axes = glm::abs(aabb.upper - aabb.lower);
+    const float S1 = axes.x * axes.y;
+    const float S2 = axes.x * axes.z;
+    const float S3 = axes.y * axes.z;
+    return 2 * (S1 + S2 + S3);
+}
 
 // TODO: Extra feature
 // As an alternative to `splitPrimitivesByMedian`, use a SAH+binning splitting criterion. Refer to
@@ -95,7 +106,81 @@ glm::vec3 sampleEnvironmentMap(RenderState& state, Ray ray)
 // This method is unit-tested, so do not change the function signature.
 size_t splitPrimitivesBySAHBin(const AxisAlignedBox& aabb, uint32_t axis, std::span<BVH::Primitive> primitives)
 {
+    // TODO: Test
+    // TODO: Visual debugging
+    // ASK: What should happen if nPrimitives < nBins?
+
+    /* DEBUG START */
+    /*const size_t DEBUG_SIZE = 17;
+    int arr[DEBUG_SIZE];
+    for (int i = 0; i < DEBUG_SIZE; i++)
+    {
+        arr[i] = i;
+    }
+    std::span<int, DEBUG_SIZE> p = std::span(arr);
+    const size_t N = DEBUG_SIZE;*/
+    /* DEBUG END */
+
     using Primitive = BVH::Primitive;
 
-    return 0; // This is clearly not the solution
+    const size_t N = primitives.size();
+    size_t nBins = 10;
+
+    // Not sure what to do in this case
+    if (N < nBins)
+    {
+        nBins = N;
+        //return splitPrimitivesByMedian(aabb, axis, primitives);
+    }
+
+    // Sort
+    splitPrimitivesByMedian(aabb, axis, primitives);
+
+    // The last bin can be bigger because primitives.size() might be not divisible by nBins.
+    const size_t binSize = N / nBins;
+    const size_t lastBinSize = binSize + N % nBins;
+
+    // We actually don't care about this since this is constant.
+    //const float outerSurfaceArea = calculateAABBSurfaceArea(aabb);
+
+    float minCost = std::numeric_limits<float>::max();
+    size_t minIndex = 1;
+
+    for (size_t i = 1; i < nBins; i++)
+    {
+        const size_t iSplit = i * binSize;
+        const size_t leftSize = iSplit;
+        const size_t rightSize = N - leftSize;
+        const float leftSurfaceArea = calculateAABBSurfaceArea(computeSpanAABB(primitives.subspan(0, leftSize)));
+        const float rightSurfaceArea = calculateAABBSurfaceArea(computeSpanAABB(primitives.subspan(iSplit, rightSize)));
+        const float cost = leftSurfaceArea * leftSize + rightSurfaceArea * rightSize;
+        if (cost < minCost)
+        {
+            minCost = cost;
+            minIndex = i;
+        }
+
+        /* DEBUG START */
+        /*{
+            std::cout << "i = " << i << ", iSplit = " << iSplit << ", leftSize = " << leftSize << ", rightSize = " << rightSize;
+            std::cout << "\nLEFT:\n";
+
+            const auto leftSpan = p.subspan(0, leftSize);
+            const auto rightSpan = p.subspan(iSplit, rightSize);
+
+            for (const auto& elem : leftSpan) {
+                std::cout << elem << " ";
+            }
+            std::cout << "\nRIGHT:\n";
+            for (const auto& elem : rightSpan) {
+                std::cout << elem << " ";
+            }
+            std::cout << "\n\n";
+        }*/
+        /* DEBUG END */
+    }
+
+    return minIndex * binSize;
+
+    //return 0; // This is clearly not the solution
 }

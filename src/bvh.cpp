@@ -231,7 +231,6 @@ size_t splitPrimitivesByMedian(const AxisAlignedBox& aabb, uint32_t axis, std::s
 // This method is unit-tested, so do not change the function signature.
 bool intersectRayWithBVH(RenderState& state, const BVHInterface& bvh, Ray& ray, HitInfo& hitInfo)
 {
-    // TODO: Test
     // ASK: Does this code make sense?
 
     // Relevant data in the constructed BVH

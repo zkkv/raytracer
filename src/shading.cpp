@@ -64,6 +64,10 @@ glm::vec3 computeLambertianModel(RenderState& state, const glm::vec3& cameraDire
 
     float dot = glm::dot(l, n);
 
+    if (state.features.enableTransparency && hitInfo.material.transparency < 1.0f && dot < 0) {
+        dot = -dot;
+    }
+
     if (dot <= 0)
         return glm::vec3 { 0 };
 
@@ -95,6 +99,10 @@ glm::vec3 computePhongModel(RenderState& state, const glm::vec3& cameraDirection
     glm::vec3 n = glm::normalize(hitInfo.normal);
 
     float dot = glm::dot(-d, n);
+
+    if (state.features.enableTransparency && hitInfo.material.transparency < 1.0f && dot < 0) {
+        dot = -dot;
+    }
 
     if (dot <= 0)
         return diffuse;
@@ -141,6 +149,10 @@ glm::vec3 computeBlinnPhongModel(RenderState& state, const glm::vec3& cameraDire
 
     if (dot <= 0)
         return diffuse;
+
+    if (state.features.enableTransparency && hitInfo.material.transparency < 1.0f && dot < 0) {
+        dot = -dot;
+    }
 
     glm::vec3 h = glm::normalize(d + cameraDirection);
 

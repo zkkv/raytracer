@@ -447,8 +447,6 @@ void BVH::buildRecursive(const Scene& scene, const Features& features, std::span
     //    3d. Recursively build left/right child nodes over their respective triangles
     //        (hint; use `std::span::subspan()` to split into left/right ranges)
 
-    if (primitives.empty()) return;
-
     const AxisAlignedBox& aabb = computeSpanAABB(primitives);
     if (primitives.size() <= BVH::LeafSize)
     {

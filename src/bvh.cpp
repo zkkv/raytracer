@@ -53,6 +53,7 @@ void updateHitInfo(RenderState& state, const BVHInterface::Primitive& primitive,
 // NOTE: this constructor is tested, so do not change the function signature.
 BVH::BVH(const Scene& scene, const Features& features)
 {
+    // Remove this if and the one below to see the time in release mode
 #ifndef NDEBUG
     // Store start of bvh build for timing
     using clock = std::chrono::high_resolution_clock;
@@ -91,6 +92,7 @@ BVH::BVH(const Scene& scene, const Features& features)
     buildNumLevels();
     buildNumLeaves();
 
+    // Remove this if and the one above to see the time in release mode
 #ifndef NDEBUG
     // Output end of bvh build for timing
     const auto end = clock::now();

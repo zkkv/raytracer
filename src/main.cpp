@@ -132,6 +132,15 @@ int main(int argc, char** argv)
                         RenderState state = { .scene = scene, .features = config.features, .bvh = bvh, .sampler = { debugRaySeed } };
                         renderRays(state, debugRays);
                     }
+                    std::cout << "Scene: " << items[sceneType] << "\n";
+                    uint32_t nTriangles = 0;
+                    for (const auto& mesh : scene.meshes)
+                    {
+                        nTriangles += mesh.triangles.size();
+                    }
+                    std::cout << "Number of triangles (primitives): " << nTriangles << "\n";
+                    std::cout << "Number of BVH tree levels: " << bvh.numLevels() << "\n";
+                    std::cout << "Number of BVH tree leaves: " << bvh.numLeaves() << "\n\n" << std::flush;
                 }
             }
             {

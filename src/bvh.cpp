@@ -230,8 +230,7 @@ size_t splitPrimitivesByMedian(const AxisAlignedBox& aabb, uint32_t axis, std::s
 bool intersectRayWithBVH(RenderState& state, const BVHInterface& bvh, Ray& ray, HitInfo& hitInfo)
 {
     // TODO: Test
-    // TODO: Optimize by reducing the number of intermediate variables
-    // (!) TODO: first push child with smaller t
+    // ASK: Does this code make sense?
 
     // Relevant data in the constructed BVH
     std::span<const BVHInterface::Node> nodes = bvh.nodes();
@@ -257,32 +256,85 @@ bool intersectRayWithBVH(RenderState& state, const BVHInterface& bvh, Ray& ray, 
         //
         // Note that it is entirely possible for a ray to hit a leaf node, but not its primitives,
         // and it is likewise possible for a ray to hit both children of a node.
-        std::list<BVHInterface::Node> stack;
-        stack.push_back(nodes[0]);
+        
+        float prevT = ray.t;
+        if (!intersectRayWithShape(nodes[BVH::RootIndex].aabb, ray))
+        {
+            return false;
+        }
+        ray.t = prevT;
+
+        // Vector-based stack seems to perform better
+        //std::list<uint32_t> stack;
+        std::vector<uint32_t> stack;
+        stack.reserve(size_t(glm::log2(float(nodes.size() + 1))) + 1);
+        stack.push_back(BVH::RootIndex);
 
         while (!stack.empty())
         {
-            const auto& currentNode = stack.back();
+            const auto& currentNode = nodes[stack.back()];
             stack.pop_back();
 
-            const bool hasIntersection = intersectRayWithShape(currentNode.aabb, ray);
-            if (!hasIntersection) {
-                continue;
-            }
 
-            // (!) TODO: first push child with smaller t
             if (!currentNode.isLeaf())
             {
-                stack.push_back(nodes[currentNode.leftChild()]);
-                stack.push_back(nodes[currentNode.rightChild()]);
+
+                const uint32_t iLeft = currentNode.leftChild();
+                const uint32_t iRight = currentNode.rightChild();
+
+                prevT = ray.t;
+                const bool hasIntersectedLeft = intersectRayWithShape(nodes[iLeft].aabb, ray);
+                const float leftT = ray.t;
+                ray.t = prevT;
+
+                const bool hasIntersectedRight = intersectRayWithShape(nodes[iRight].aabb, ray);
+                const float rightT = ray.t;
+                ray.t = prevT;
+
+                if (hasIntersectedLeft && hasIntersectedRight)
+                {
+                    if (leftT < rightT)
+                    {
+                        stack.push_back(iRight);
+                        stack.push_back(iLeft);
+                    } 
+                    else 
+                    {
+                        stack.push_back(iLeft);
+                        stack.push_back(iRight);
+                    }
+                }
+                else if (hasIntersectedLeft)
+                {
+                    stack.push_back(iLeft);
+                }
+                else if (hasIntersectedRight)
+                {
+                    stack.push_back(iRight);
+                }
+
+                /*prevT = ray.t;
+                if (intersectRayWithShape(nodes[iLeft].aabb, ray))
+                {   
+                    stack.push_back(iLeft);
+                    ray.t = prevT;
+                }
+
+                if (intersectRayWithShape(nodes[iRight].aabb, ray))
+                {
+                    stack.push_back(iRight);
+                    ray.t = prevT;
+                }*/
             } 
             else
             {
-
-                for (int i = currentNode.primitiveOffset(); i < currentNode.primitiveOffset() + currentNode.primitiveCount(); i++)
+                const uint32_t start = currentNode.primitiveOffset();
+                const uint32_t end = currentNode.primitiveOffset() + currentNode.primitiveCount();
+                for (uint32_t i = start; i < end; i++)
                 {
                     const auto& primitive = primitives[i];
-                    if (intersectRayWithTriangle(primitive.v0.position, primitive.v1.position, primitive.v2.position, ray, hitInfo)) {
+                    if (intersectRayWithTriangle(primitive.v0.position, primitive.v1.position, primitive.v2.position, ray, hitInfo)) 
+                    {
                         updateHitInfo(state, primitive, ray, hitInfo);
                         is_hit = true;
                     }
@@ -290,11 +342,15 @@ bool intersectRayWithBVH(RenderState& state, const BVHInterface& bvh, Ray& ray, 
             }
         }
 
-    } else {
+    } 
+    else 
+    {
         // Naive implementation; simply iterates over all primitives
-        for (const auto& prim : primitives) {
+        for (const auto& prim : primitives) 
+        {
             const auto& [v0, v1, v2] = std::tie(prim.v0, prim.v1, prim.v2);
-            if (intersectRayWithTriangle(v0.position, v1.position, v2.position, ray, hitInfo)) {
+            if (intersectRayWithTriangle(v0.position, v1.position, v2.position, ray, hitInfo)) 
+            {
                 updateHitInfo(state, prim, ray, hitInfo);
                 is_hit = true;
             }

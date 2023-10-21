@@ -465,10 +465,20 @@ void BVH::buildRecursive(const Scene& scene, const Features& features, std::span
         if (features.extra.enableBvhSahBinning)
         {
             splitIndex = splitPrimitivesBySAHBin(aabb, computeAABBLongestAxis(aabb), primitives);
+
+            if (splitIndex == 0)
+            {
+                // Leaf
+                m_nodes[nodeIndex] = buildLeafData(scene, features, aabb, primitives);
+                std::copy(primitives.begin(), primitives.end(), std::back_inserter(m_primitives));
+                return;
+            }
+            std::cout << primitives.size() << " " << splitIndex << std::endl;
         } 
         else 
         {
             splitIndex = splitPrimitivesByMedian(aabb, computeAABBLongestAxis(aabb), primitives);
+            std::cout << primitives.size() << " " << splitIndex << std::endl;
         }
 
 

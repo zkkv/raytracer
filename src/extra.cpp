@@ -109,6 +109,8 @@ size_t splitPrimitivesBySAHBin(const AxisAlignedBox& aabb, uint32_t axis, std::s
     // TODO: Test
     // TODO: Visual debugging
     // ASK: What should happen if nPrimitives < nBins?
+    // ASK: Do we need to compare with base cost?
+    // ASK: Should we now ignore LeafSize variable and only use heuristic?
 
     /* DEBUG START */
     /*const size_t DEBUG_SIZE = 17;
@@ -145,6 +147,7 @@ size_t splitPrimitivesBySAHBin(const AxisAlignedBox& aabb, uint32_t axis, std::s
 
     float minCost = std::numeric_limits<float>::max();
     size_t minIndex = 1;
+    const float baseCost = N * calculateAABBSurfaceArea(aabb);
 
     for (size_t i = 1; i < nBins; i++)
     {
@@ -178,6 +181,11 @@ size_t splitPrimitivesBySAHBin(const AxisAlignedBox& aabb, uint32_t axis, std::s
             std::cout << "\n\n";
         }*/
         /* DEBUG END */
+    }
+
+    if (minCost >= baseCost)
+    {
+        return 0;
     }
 
     return minIndex * binSize;

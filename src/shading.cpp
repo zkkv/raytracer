@@ -41,14 +41,14 @@ glm::vec3 computeShading(RenderState& state, const glm::vec3& cameraDirection, c
 
     if (state.features.enableShading) {
         switch (state.features.shadingModel) {
-            case ShadingModel::Lambertian:
-                return computeLambertianModel(state, cameraDirection, lightDirection, lightColor, hitInfo);
-            case ShadingModel::Phong:
-                return computePhongModel(state, cameraDirection, lightDirection, lightColor, hitInfo);
-            case ShadingModel::BlinnPhong:
-                return computeBlinnPhongModel(state, cameraDirection, lightDirection, lightColor, hitInfo);
-            case ShadingModel::LinearGradient:
-                return computeLinearGradientModel(state, cameraDirection, lightDirection, lightColor, hitInfo, gradient);
+        case ShadingModel::Lambertian:
+            return computeLambertianModel(state, cameraDirection, lightDirection, lightColor, hitInfo);
+        case ShadingModel::Phong:
+            return computePhongModel(state, cameraDirection, lightDirection, lightColor, hitInfo);
+        case ShadingModel::BlinnPhong:
+            return computeBlinnPhongModel(state, cameraDirection, lightDirection, lightColor, hitInfo);
+        case ShadingModel::LinearGradient:
+            return computeLinearGradientModel(state, cameraDirection, lightDirection, lightColor, hitInfo, gradient);
         };
     }
 
@@ -63,6 +63,10 @@ glm::vec3 computeLambertianModel(RenderState& state, const glm::vec3& cameraDire
     glm::vec3 n = glm::normalize(hitInfo.normal);
 
     float dot = glm::dot(l, n);
+
+    if (state.features.enableTransparency && hitInfo.material.transparency < 1.0f && dot < 0) {
+        dot = -dot;
+    }
 
     if (dot <= 0)
         return glm::vec3 { 0 };
@@ -87,14 +91,18 @@ glm::vec3 computeLambertianModel(RenderState& state, const glm::vec3& cameraDire
 // This method is unit-tested, so do not change the function signature.
 glm::vec3 computePhongModel(RenderState& state, const glm::vec3& cameraDirection, const glm::vec3& lightDirection, const glm::vec3& lightColor, const HitInfo& hitInfo)
 {
-    // No ambient, diffuse = Lambertian, so only calculate specular  
-    
+    // No ambient, diffuse = Lambertian, so only calculate specular
+
     glm::vec3 diffuse = computeLambertianModel(state, cameraDirection, lightDirection, lightColor, hitInfo);
 
     glm::vec3 d = glm::normalize(-lightDirection);
     glm::vec3 n = glm::normalize(hitInfo.normal);
 
     float dot = glm::dot(-d, n);
+
+    if (state.features.enableTransparency && hitInfo.material.transparency < 1.0f && dot < 0) {
+        dot = -dot;
+    }
 
     if (dot <= 0)
         return diffuse;
@@ -142,6 +150,10 @@ glm::vec3 computeBlinnPhongModel(RenderState& state, const glm::vec3& cameraDire
     if (dot <= 0)
         return diffuse;
 
+    if (state.features.enableTransparency && hitInfo.material.transparency < 1.0f && dot < 0) {
+        dot = -dot;
+    }
+
     glm::vec3 h = glm::normalize(d + cameraDirection);
 
     float NdotH = glm::dot(n, h);
@@ -168,13 +180,11 @@ glm::vec3 LinearGradient::sample(float ti) const
     if (components[0].t > ti)
         return components[0].color;
 
-    for (int i = 0; i < components.size() - 1; i++)
-    {   
+    for (int i = 0; i < components.size() - 1; i++) {
         if (std::fabs(components[i].t - ti) <= 1e-6f) // ti is on a boundary
             return components[i].color;
 
-        if (components[i].t < ti && components[i + 1].t > ti)
-        {
+        if (components[i].t < ti && components[i + 1].t > ti) {
             float tLeft = components[i].t;
             float tRight = components[i + 1].t;
             glm::vec3 colorLeft = components[i].color;

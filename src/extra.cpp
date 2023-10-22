@@ -34,6 +34,15 @@ void renderImageWithMotionBlur(const Scene& scene, const BVHInterface& bvh, cons
 
 }
 
+uint32_t choose(const int N, const int K)
+{
+    if (K == 0)
+    {
+        return 1;
+    }
+    return (N * choose(N - 1, K - 1)) / K;
+}
+
 // TODO; Extra feature
 // Given a rendered image, compute and apply a bloom post-processing effect to increase bright areas.
 // This method is not unit-tested, but we do expect to find it **exactly here**, and we'd rather
@@ -44,7 +53,25 @@ void postprocessImageWithBloom(const Scene& scene, const Features& features, con
         return;
     }
 
-    // ...
+    const int width = image.resolution().x;
+    const int height = image.resolution().y;
+
+    const std::vector<glm::vec3>& pixelsArray = image.pixels();
+    const size_t SIZE = pixelsArray.size();
+
+    std::vector<glm::vec3> filtered;
+    filtered.reserve(SIZE);
+
+    for (int i = 0; i < width; i++)
+    {
+        for (int j = 0; j < height; j++)
+        {
+            const int index = image.indexAt(i, j);
+            //image.setPixel(i, j, pixelsArray[index] * float(choose(index, SIZE)));
+            image.setPixel(i, j, glm::vec3 { 1.0f });
+        }
+        
+    }
 }
 
 

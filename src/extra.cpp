@@ -4,6 +4,7 @@
 #include "recursive.h"
 #include "shading.h"
 #include <framework/trackball.h>
+#include <ctime>
 
 // TODO; Extra feature
 // Given the same input as for `renderImage()`, instead render an image with your own implementation
@@ -47,6 +48,41 @@ void postprocessImageWithBloom(const Scene& scene, const Features& features, con
     // ...
 }
 
+std::array<glm::vec3, 3> constructOrthonormalBasis(const glm::vec3& r)
+{
+    glm::vec3 w = glm::normalize(r);
+    glm::vec3 t;
+
+    const glm::vec3 w_abs = glm::abs(w);
+
+    if (w_abs.x < w_abs.y && w_abs.x < w_abs.z)
+    {
+        t = glm::vec3 { 1.0f, w.y, w.z };
+    }
+    else if (w_abs.y < w_abs.x && w_abs.y < w_abs.z)
+    {
+        t = glm::vec3 { w.x, 1.0f, w.z };
+    } 
+    else 
+    {
+        t = glm::vec3 { w.x, w.y, 1.0f };
+    }
+    
+    glm::vec3 u = glm::normalize(glm::cross(t, w));
+    glm::vec3 v = glm::cross(w, u);
+    return { w, u, v };
+}
+
+std::array<float, 2> sampleDisk(const float radius = 1.0f)
+{
+    srand(time(NULL));
+    const float r = radius * glm::sqrt((float)rand() / RAND_MAX);
+    const float angle = ((float)rand() / RAND_MAX) * 2 * glm::pi<float>();
+    const float x = r * glm::cos(angle);
+    const float y = r * glm::sin(angle);
+    return { x, y };
+}
+
 
 // TODO; Extra feature
 // Given a camera ray (or reflected camera ray) and an intersection, evaluates the contribution of a set of
@@ -61,9 +97,46 @@ void postprocessImageWithBloom(const Scene& scene, const Features& features, con
 // not go on a hunting expedition for your implementation, so please keep it here!
 void renderRayGlossyComponent(RenderState& state, Ray ray, const HitInfo& hitInfo, glm::vec3& hitColor, int rayDepth)
 {
+    // TODO: Test
+    // TODO: Add visual debug
+    // ASK: What to do with parameter t of the new ray?
+    // ASK: what to do with numGlossySamples?
+    // ASK: Do I handle perturbed ray being below the surface right?
+    // ASK: Should radius be inversly proportional to shininess?
+
     // Generate an initial specular ray, and base secondary glossies on this ray
-    // auto numSamples = state.features.extra.numGlossySamples;
-    // ...
+    
+    const uint32_t numSamples = state.features.extra.numGlossySamples;
+    
+    // Radius of the disk
+    const float radius = 64 / hitInfo.material.shininess;
+
+    if (rayDepth >= numSamples)
+    {
+        return;
+    }
+
+    const std::array<float, 2> point = sampleDisk(radius);
+
+    //const float u_coeff = -(width / 2.0f) + point[0] * width;
+    //const float v_coeff = -(width / 2.0f) + point[1] * width;
+
+    Ray r = generateReflectionRay(ray, hitInfo);
+
+    std::array<glm::vec3, 3> basis = constructOrthonormalBasis(r.direction);
+
+    Ray perturbedRay;
+    perturbedRay.direction = glm::normalize(basis[0] + point[0] * basis[1] + point[1] * basis[2]);
+
+    if (glm::dot(perturbedRay.direction, hitInfo.normal) <= 0)
+    {
+        return;
+    }
+
+    perturbedRay.origin = r.origin;
+    perturbedRay.t = std::numeric_limits<float>::max();
+
+    renderRay(state, perturbedRay, rayDepth + 1);
 }
 
 // TODO; Extra feature

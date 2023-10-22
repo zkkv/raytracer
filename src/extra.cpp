@@ -6,6 +6,11 @@
 #include <framework/trackball.h>
 #include <iostream>
 
+void printVector(const glm::vec3& vector, const std::string& str = "")
+{
+    std::cout << str << "(" << vector.x << ", " << vector.y << ", " << vector.z << ")" << std::endl;
+}
+
 // TODO; Extra feature
 // Given the same input as for `renderImage()`, instead render an image with your own implementation
 // of Depth of Field. Here, you generate camera rays s.t. a focus point and a thin lens camera model
@@ -111,17 +116,18 @@ std::vector<std::vector<glm::vec3>> generateGaussianFilter(const int K)
 void applyFilterToPixel(const size_t i, 
                         const size_t j, 
                         Screen& image, 
+                        const std::vector<glm::vec3>& imageCopy,
                         const std::vector<std::vector<glm::vec3>>& filter,
                         const size_t filterSize)
 {
     //const auto& pixelArray = image.pixels();
     glm::vec3 updated { 0.0f };
-    for (int y = i - filterSize; y <= filterSize; y++)
+    for (int y = i - filterSize; y <= i + filterSize; y++)
     {
-        for (int x = j - filterSize; x <= filterSize; x++)
+        for (int x = j - filterSize; x <= j + filterSize; x++)
         {
-            const size_t index = image.indexAt(x, y);
-            updated += image.pixels()[index] * filter[i - y][j - x];
+            const size_t index = image.indexAt(y, x);
+            updated += imageCopy[index] * filter[i - y + filterSize][j - x + filterSize];
         }
     }
     image.setPixel(i, j, updated);
@@ -137,20 +143,21 @@ void postprocessImageWithBloom(const Scene& scene, const Features& features, con
     // TODO: visual debug
     // TODO: thresholds
     // TODO: Handle boundaries
+    // TODO: Make separable
 
     if (!features.extra.enableBloomEffect) {
         return;
     }
 
-    std::vector<glm::vec3>& pixelsArray = image.pixels();
-    const size_t SIZE = pixelsArray.size();
+    const std::vector<glm::vec3> imageCopy = image.pixels();
+    const size_t SIZE = imageCopy.size();
     const int width = image.resolution().x;
     const int height = image.resolution().y;
     //const int variance = 1;
     //const float norm = 1 / (2 * glm::pi<float>() * variance);
     //const int K = int(2 * glm::pi<float>() * glm::sqrt(variance));
-    const float threshold = 0.5f;
-    const int filterSize = 1;
+    const float threshold = 0.7f;
+    const int filterSize = 5;
     const int K = filterSize * 2 + 1;
 
     std::vector<glm::vec3> filtered;
@@ -192,7 +199,7 @@ void postprocessImageWithBloom(const Scene& scene, const Features& features, con
 
     std::cout << std::endl;*/
 
-    for (int i = 0; i < K; i++)
+  /*  for (int i = 0; i < K; i++)
     {
         for (int j = 0; j < K; j++)
         {
@@ -200,7 +207,7 @@ void postprocessImageWithBloom(const Scene& scene, const Features& features, con
         }
         std::cout << "\n";
     }
-    std::cout << std::endl;
+    std::cout << std::endl;*/
 
     for (int i = filterSize; i < height - filterSize; i++)
     {
@@ -208,13 +215,17 @@ void postprocessImageWithBloom(const Scene& scene, const Features& features, con
         for (int j = filterSize; j < width - filterSize; j++)
         {
             const int index = image.indexAt(i, j);
-            const glm::vec3 pixel = pixelsArray[index];
+            const glm::vec3& pixel = imageCopy[index];
             if (perceivedLuminance(pixel) < threshold)
             {
                 continue;
             }
 
-            applyFilterToPixel(i, j, image, filter, filterSize);
+            applyFilterToPixel(i, j, image, imageCopy, filter, filterSize);
+
+            //printVector(imageCopy[index]);
+            //printVector(image.pixels()[index]);
+            //std::cout << std::endl;
             
             //const float factor = binomial(width, i);
 

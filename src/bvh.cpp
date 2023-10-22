@@ -12,12 +12,6 @@
 #include <framework/opengl_includes.h>
 #include <iostream>
 
-
-void printVector(const glm::vec3& vector, const std::string& str = "")
-{
-    std::cout << str << "(" << vector.x << ", " << vector.y << ", " << vector.z << ")" << std::endl;
-}
-
 // Helper method to fill in hitInfo object. This can be safely ignored (or extended).
 // Note: many of the functions in this helper tie in to standard/extra features you will have
 // to implement separately, see interpolate.h/.cpp for these parts of the project

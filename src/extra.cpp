@@ -4,6 +4,7 @@
 #include "recursive.h"
 #include "shading.h"
 #include <framework/trackball.h>
+#include <iostream>
 
 // TODO; Extra feature
 // Given the same input as for `renderImage()`, instead render an image with your own implementation
@@ -34,13 +35,96 @@ void renderImageWithMotionBlur(const Scene& scene, const BVHInterface& bvh, cons
 
 }
 
-uint32_t choose(const int N, const int K)
+uint64_t binomial(const int n, const int k)
 {
-    if (K == 0)
+    if (k == 0)
     {
         return 1;
     }
-    return (N * choose(N - 1, K - 1)) / K;
+    return (n * binomial(n - 1, k - 1)) / k;
+}
+
+float perceivedLuminance(glm::vec3 colors)
+{
+    // Coefficients for calculation of perceived luminance
+    const float c_R = 0.2126f;
+    const float c_G = 0.7152f;
+    const float c_B = 0.0722f;
+    return c_R * colors.r + c_G * colors.g + c_B * colors.b;
+}
+//
+//template<int K>
+//std::array<std::array<glm::vec3, K>, K>& computeGaussianFilter(int K)
+//{
+//    std::array<std::array<glm::vec3, K>, K> filter;
+//    for (int i = 0; i < K; i++)
+//    {
+//        for (int j = 0; k < K; j++)
+//        {
+//
+//        }
+//    }
+//    return filter;
+//}
+
+std::vector<std::vector<glm::vec3>> outerProduct(std::vector<glm::vec3>& vector)
+{
+    std::vector<std::vector<glm::vec3>> result;
+    const size_t SIZE = vector.size();
+    result.resize(SIZE);
+
+    for (int i = 0; i < SIZE; i++)
+    {
+        result[i].resize(SIZE);
+    }
+
+    for (int i = 0; i < SIZE; i++)
+    {
+        for (int j = 0; j < SIZE; j++)
+        {
+            result[i][j] = vector[i] * vector[j];
+        }
+    }
+    return result;
+}
+
+std::vector<std::vector<glm::vec3>> generateGaussianFilter(const int K)
+{
+    std::vector<glm::vec3> oneDim;
+    oneDim.reserve(K);
+    glm::vec3 sum { 0.0f };
+    for (int i = 0; i < K; i++)
+    {
+        const glm::vec3 computed = glm::vec3 { float(binomial(K - 1, i)) };
+        oneDim.push_back(computed);
+        sum += computed;
+    }
+
+    for (int i = 0; i < K; i++) 
+    {
+        oneDim[i] /= sum;
+    }
+
+    return outerProduct(oneDim);
+}
+
+void applyFilterToPixel(const size_t i, 
+                        const size_t j, 
+                        Screen& image, 
+                        const std::vector<std::vector<glm::vec3>>& filter,
+                        const size_t filterSize)
+{
+    //const auto& pixelArray = image.pixels();
+    glm::vec3 updated { 0.0f };
+    for (int y = i - filterSize; y <= filterSize; y++)
+    {
+        for (int x = j - filterSize; x <= filterSize; x++)
+        {
+            const size_t index = image.indexAt(x, y);
+            updated += image.pixels()[index] * filter[i - y][j - x];
+        }
+    }
+    image.setPixel(i, j, updated);
 }
 
 // TODO; Extra feature
@@ -49,28 +133,106 @@ uint32_t choose(const int N, const int K)
 // not go on a hunting expedition for your implementation, so please keep it here!
 void postprocessImageWithBloom(const Scene& scene, const Features& features, const Trackball& camera, Screen& image)
 {
+    // TODO: Test
+    // TODO: visual debug
+    // TODO: thresholds
+    // TODO: Handle boundaries
+
     if (!features.extra.enableBloomEffect) {
         return;
     }
 
+    std::vector<glm::vec3>& pixelsArray = image.pixels();
+    const size_t SIZE = pixelsArray.size();
     const int width = image.resolution().x;
     const int height = image.resolution().y;
-
-    const std::vector<glm::vec3>& pixelsArray = image.pixels();
-    const size_t SIZE = pixelsArray.size();
+    //const int variance = 1;
+    //const float norm = 1 / (2 * glm::pi<float>() * variance);
+    //const int K = int(2 * glm::pi<float>() * glm::sqrt(variance));
+    const float threshold = 0.5f;
+    const int filterSize = 1;
+    const int K = filterSize * 2 + 1;
 
     std::vector<glm::vec3> filtered;
     filtered.reserve(SIZE);
 
-    for (int i = 0; i < width; i++)
+    //const std::array<std::array<glm::vec3, K>, K>& filter = computeGaussianFilter<K>(K);
+
+    std::vector<std::vector<glm::vec3>> filter = generateGaussianFilter(K);
+
+    /*std::array<std::array<glm::vec3, K>, K> filter;
+    for (int i = 0; i < K; i++)
     {
-        for (int j = 0; j < height; j++)
+        glm::vec3 sum {0.0f};
+        for (int j = 0; j < K; j++)
+        {
+            filter[i][j] = glm::vec3 { float(binomial(K - 1, j)) };
+            sum += filter[i][j];
+        }
+        for (int j = 0; j < K; j++) {
+            filter[i][j] /= sum;
+        }
+    }
+
+    for (int i = 0; i < K; i++) 
+    {
+        glm::vec3 sum { 0.0f };
+        for (int j = 0; j < K; j++) 
+        {
+            filter[j][i] *= glm::vec3 { float(binomial(K - 1, j)) };
+            sum += filter[j][i];
+        }
+        for (int j = 0; j < K; j++) 
+        {
+            filter[j][i] /= sum;
+            std::cout << filter[i][j].x << " ";
+        }
+        std::cout << "\n";
+    }
+
+    std::cout << std::endl;*/
+
+    for (int i = 0; i < K; i++)
+    {
+        for (int j = 0; j < K; j++)
+        {
+            std::cout << filter[i][j].x << "\t\t"; 
+        }
+        std::cout << "\n";
+    }
+    std::cout << std::endl;
+
+    for (int i = filterSize; i < height - filterSize; i++)
+    {
+        //glm::vec3 sum {0.0f};
+        for (int j = filterSize; j < width - filterSize; j++)
         {
             const int index = image.indexAt(i, j);
-            //image.setPixel(i, j, pixelsArray[index] * float(choose(index, SIZE)));
-            image.setPixel(i, j, glm::vec3 { 1.0f });
+            const glm::vec3 pixel = pixelsArray[index];
+            if (perceivedLuminance(pixel) < threshold)
+            {
+                continue;
+            }
+
+            applyFilterToPixel(i, j, image, filter, filterSize);
+            
+            //const float factor = binomial(width, i);
+
+            //const float debug = glm::length(pixel);
+
+            //std::cout << debug << std::endl;
+
+            //const glm::vec3 newVal = pixel * factor;
+
+            //image.setPixel(i, j, newVal);
+            //sum += newVal;
         }
         
+         //for (int j = 0; j < width; j++) 
+         //{
+         //   const int index = image.indexAt(i, j);
+         //   image.setPixel(i, j, pixelsArray[index] / sum);
+         //}
     }
 }
 

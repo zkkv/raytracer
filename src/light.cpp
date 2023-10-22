@@ -191,10 +191,8 @@ glm::vec3 computeContributionSegmentLight(RenderState& state, const SegmentLight
         glm::vec3 position, color;
         sampleSegmentLight(state.sampler.next_1d(), light, position, color);
         glm::vec3 lightColor = visibilityOfLightSample(state, position, color, ray, hitInfo);
-        contribution += computeShading(state, -ray.direction, position, lightColor, hitInfo);
+        contribution += computeShading(state, -ray.direction, position, lightColor, hitInfo) / (1.0f * numSamples);
     }
-
-    contribution /= 1.0f * numSamples;
 
     return contribution;
 }
@@ -230,10 +228,8 @@ glm::vec3 computeContributionParallelogramLight(RenderState& state, const Parall
         glm::vec3 position, color;
         sampleParallelogramLight(state.sampler.next_2d(), light, position, color);
         glm::vec3 lightColor = visibilityOfLightSample(state, position, color, ray, hitInfo);
-        contribution += computeShading(state, -ray.direction, position, lightColor, hitInfo);
+        contribution += computeShading(state, -ray.direction, position, lightColor, hitInfo) / (1.0f * numSamples);
     }
-
-    contribution /= 1.0f * numSamples;
 
     return contribution;
 }

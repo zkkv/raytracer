@@ -105,10 +105,11 @@ bool visibilityOfLightSampleBinary(RenderState& state, const glm::vec3& lightPos
 // This method is unit-tested, so do not change the function signature.
 glm::vec3 visibilityOfLightSampleTransparency(RenderState& state, const glm::vec3& lightPosition, const glm::vec3& lightColor, const Ray& ray, const HitInfo& hitInfo)
 {
+    // TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO 
     glm::vec3 incomingLightColor = lightColor;
-    glm::vec3 materialColor;
+    glm::vec3 materialColor = lightColor * hitInfo.material.kd * hitInfo.material.transparency;
     glm::vec3 intersectionPoint = ray.origin + ray.t * ray.direction;
-
+    
     bool intersects = true;
     bool finalRayT = false;
     glm::vec3 lightRayOrigin = lightPosition;
@@ -122,16 +123,17 @@ glm::vec3 visibilityOfLightSampleTransparency(RenderState& state, const glm::vec
         intersects = state.bvh.intersect(state, lightRay, lightRayHitInfo);
         finalRayT = std::fabs(lightRay.t - glm::length(intersectionPoint - lightRay.origin)) <= 1e-5f;
 
-        materialColor = incomingLightColor * hitInfo.material.kd * hitInfo.material.transparency; // color of material
-
         if (intersects) {
+            materialColor = incomingLightColor * hitInfo.material.kd * hitInfo.material.transparency; // color of material
             incomingLightColor = incomingLightColor * hitInfo.material.kd * (1.0f - hitInfo.material.transparency); // light that remains
-            lightRayOrigin = lightRay.origin + (lightRay.t + 5e-6f) * lightRay.direction;
+            lightRayOrigin = lightRay.origin + (lightRay.t + 1e-6f) * lightRay.direction;
         }
-        
+        // problem : normals are facing the other way?
+        // shadows are black
+        // incomingLightColor is too dim
+        // maybe go the other way and use background?
     }
 
-    //return intersects ? finalLightColor : glm::vec3(0);
     return materialColor;
 }
 
@@ -155,7 +157,7 @@ glm::vec3 computeContributionPointLight(RenderState& state, const PointLight& li
     glm::vec3 p = ray.origin + ray.t * ray.direction;
     glm::vec3 l = glm::normalize(light.position - p);
     glm::vec3 v = -ray.direction;
-    //return computeShading(state, v, l, light.color, hitInfo);
+    
     return computeShading(state, v, l, visibleLight, hitInfo);
 }
 
@@ -182,7 +184,19 @@ glm::vec3 computeContributionSegmentLight(RenderState& state, const SegmentLight
     // - sample the segment light
     // - test the sample's visibility
     // - then evaluate the phong model
-    return glm::vec3(0);
+
+    glm::vec3 contribution = glm::vec3(0);
+
+    for (int i = 0; i < numSamples; i++) {
+        glm::vec3 position, color;
+        sampleSegmentLight(state.sampler.next_1d(), light, position, color);
+        glm::vec3 lightColor = visibilityOfLightSample(state, position, color, ray, hitInfo);
+        contribution += computeShading(state, -ray.direction, position, lightColor, hitInfo);
+    }
+
+    contribution /= 1.0f * numSamples;
+
+    return contribution;
 }
 
 // TODO: Standard feature
@@ -209,7 +223,19 @@ glm::vec3 computeContributionParallelogramLight(RenderState& state, const Parall
     // - sample the parallellogram light
     // - test the sample's visibility
     // - then evaluate the phong model
-    return glm::vec3(0);
+
+    glm::vec3 contribution = glm::vec3(0);
+
+    for (int i = 0; i < numSamples; i++) {
+        glm::vec3 position, color;
+        sampleParallelogramLight(state.sampler.next_2d(), light, position, color);
+        glm::vec3 lightColor = visibilityOfLightSample(state, position, color, ray, hitInfo);
+        contribution += computeShading(state, -ray.direction, position, lightColor, hitInfo);
+    }
+
+    contribution /= 1.0f * numSamples;
+
+    return contribution;
 }
 
 // This function is provided as-is. You do not have to implement it.

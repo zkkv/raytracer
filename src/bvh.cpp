@@ -473,12 +473,12 @@ void BVH::buildRecursive(const Scene& scene, const Features& features, std::span
                 std::copy(primitives.begin(), primitives.end(), std::back_inserter(m_primitives));
                 return;
             }
-            std::cout << primitives.size() << " " << splitIndex << std::endl;
+            //std::cout << primitives.size() << " " << splitIndex << std::endl;
         } 
         else 
         {
             splitIndex = splitPrimitivesByMedian(aabb, computeAABBLongestAxis(aabb), primitives);
-            std::cout << primitives.size() << " " << splitIndex << std::endl;
+            //std::cout << primitives.size() << " " << splitIndex << std::endl;
         }
 
 

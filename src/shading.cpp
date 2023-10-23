@@ -41,14 +41,14 @@ glm::vec3 computeShading(RenderState& state, const glm::vec3& cameraDirection, c
 
     if (state.features.enableShading) {
         switch (state.features.shadingModel) {
-        case ShadingModel::Lambertian:
-            return computeLambertianModel(state, cameraDirection, lightDirection, lightColor, hitInfo);
-        case ShadingModel::Phong:
-            return computePhongModel(state, cameraDirection, lightDirection, lightColor, hitInfo);
-        case ShadingModel::BlinnPhong:
-            return computeBlinnPhongModel(state, cameraDirection, lightDirection, lightColor, hitInfo);
-        case ShadingModel::LinearGradient:
-            return computeLinearGradientModel(state, cameraDirection, lightDirection, lightColor, hitInfo, gradient);
+            case ShadingModel::Lambertian:
+                return computeLambertianModel(state, cameraDirection, lightDirection, lightColor, hitInfo);
+            case ShadingModel::Phong:
+                return computePhongModel(state, cameraDirection, lightDirection, lightColor, hitInfo);
+            case ShadingModel::BlinnPhong:
+                return computeBlinnPhongModel(state, cameraDirection, lightDirection, lightColor, hitInfo);
+            case ShadingModel::LinearGradient:
+                return computeLinearGradientModel(state, cameraDirection, lightDirection, lightColor, hitInfo, gradient);
         };
     }
 

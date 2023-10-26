@@ -41,14 +41,14 @@ glm::vec3 computeShading(RenderState& state, const glm::vec3& cameraDirection, c
 
     if (state.features.enableShading) {
         switch (state.features.shadingModel) {
-        case ShadingModel::Lambertian:
-            return computeLambertianModel(state, cameraDirection, lightDirection, lightColor, hitInfo);
-        case ShadingModel::Phong:
-            return computePhongModel(state, cameraDirection, lightDirection, lightColor, hitInfo);
-        case ShadingModel::BlinnPhong:
-            return computeBlinnPhongModel(state, cameraDirection, lightDirection, lightColor, hitInfo);
-        case ShadingModel::LinearGradient:
-            return computeLinearGradientModel(state, cameraDirection, lightDirection, lightColor, hitInfo, gradient);
+            case ShadingModel::Lambertian:
+                return computeLambertianModel(state, cameraDirection, lightDirection, lightColor, hitInfo);
+            case ShadingModel::Phong:
+                return computePhongModel(state, cameraDirection, lightDirection, lightColor, hitInfo);
+            case ShadingModel::BlinnPhong:
+                return computeBlinnPhongModel(state, cameraDirection, lightDirection, lightColor, hitInfo);
+            case ShadingModel::LinearGradient:
+                return computeLinearGradientModel(state, cameraDirection, lightDirection, lightColor, hitInfo, gradient);
         };
     }
 
@@ -168,6 +168,13 @@ glm::vec3 computeBlinnPhongModel(RenderState& state, const glm::vec3& cameraDire
     return diffuse + specular;
 }
 
+// Comparator for two linear gradients components
+// Used to sort ascending by their t value
+bool componentsComparator(const LinearGradient::Component c1, const LinearGradient::Component c2)
+{
+    return c1.t < c2.t;
+}
+
 // TODO: Standard feature
 // Given a number ti between [-1, 1], sample from the gradient's components and return the
 // linearly interpolated color, for which ti lies in the interval between the t-values of two
@@ -177,25 +184,29 @@ glm::vec3 computeBlinnPhongModel(RenderState& state, const glm::vec3& cameraDire
 // This method is unit-tested, so do not change the function signature.
 glm::vec3 LinearGradient::sample(float ti) const
 {
-    if (components[0].t > ti)
-        return components[0].color;
+    std::vector<LinearGradient::Component> componentsCopy = components;
 
-    for (int i = 0; i < components.size() - 1; i++) {
-        if (std::fabs(components[i].t - ti) <= 1e-6f) // ti is on a boundary
-            return components[i].color;
+    std::sort(componentsCopy.begin(), componentsCopy.end(), componentsComparator);
 
-        if (components[i].t < ti && components[i + 1].t > ti) {
-            float tLeft = components[i].t;
-            float tRight = components[i + 1].t;
-            glm::vec3 colorLeft = components[i].color;
-            glm::vec3 colorRight = components[i + 1].color;
+    if (componentsCopy[0].t > ti)
+        return componentsCopy[0].color;
+
+    for (int i = 0; i < componentsCopy.size() - 1; i++) {
+        if (std::fabs(componentsCopy[i].t - ti) <= 1e-6f) // ti is on a boundary
+            return componentsCopy[i].color;
+
+        if (componentsCopy[i].t < ti && componentsCopy[i + 1].t > ti) {
+            float tLeft = componentsCopy[i].t;
+            float tRight = componentsCopy[i + 1].t;
+            glm::vec3 colorLeft = componentsCopy[i].color;
+            glm::vec3 colorRight = componentsCopy[i + 1].color;
 
             float alpha = (ti - tLeft) / (tRight - tLeft);
             return (1.0f - alpha) * colorLeft + alpha * colorRight;
         }
     }
 
-    return components[components.size() - 1].color;
+    return componentsCopy[componentsCopy.size() - 1].color;
 }
 
 // TODO: Standard feature

@@ -144,6 +144,10 @@ void postprocessImageWithBloom(const Scene& scene, const Features& features, con
     // TODO: thresholds
     // TODO: Handle boundaries
     // TODO: Make separable
+    // ADVICE: Make a copy -> Set all values below threshold to zero -> add two images (maybe multiply the thresheld image by a number < 1)
+    // ADVICE: See render.cpp: #pragma omp parallel for schedule(guided) to parallelize the for loop (if you have time)
+    // ADVICE: For visual debug show the thresheld picture
+    // ADVICE: For boundaries pad with a constant color (e.g. 0)
 
     if (!features.extra.enableBloomEffect) {
         return;

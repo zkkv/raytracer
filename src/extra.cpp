@@ -3,8 +3,8 @@
 #include "light.h"
 #include "recursive.h"
 #include "shading.h"
+#include "draw.h"
 #include <framework/trackball.h>
-#include <ctime>
 
 // TODO; Extra feature
 // Given the same input as for `renderImage()`, instead render an image with your own implementation
@@ -73,11 +73,10 @@ std::array<glm::vec3, 3> constructOrthonormalBasis(const glm::vec3& r)
     return { w, u, v };
 }
 
-std::array<float, 2> sampleDisk(const float radius = 1.0f)
+std::array<float, 2> sampleDisk(RenderState& state, const float radius = 1.0f)
 {
-    srand(time(NULL));
-    const float r = radius * glm::sqrt((float)rand() / RAND_MAX);
-    const float angle = ((float)rand() / RAND_MAX) * 2 * glm::pi<float>();
+    const float r = radius * glm::sqrt(state.sampler.next_1d());
+    const float angle = state.sampler.next_1d() * 2 * glm::pi<float>();
     const float x = r * glm::cos(angle);
     const float y = r * glm::sin(angle);
     return { x, y };
@@ -97,46 +96,47 @@ std::array<float, 2> sampleDisk(const float radius = 1.0f)
 // not go on a hunting expedition for your implementation, so please keep it here!
 void renderRayGlossyComponent(RenderState& state, Ray ray, const HitInfo& hitInfo, glm::vec3& hitColor, int rayDepth)
 {
-    // TODO: Test
-    // TODO: Add visual debug
-    // ASK: What to do with parameter t of the new ray?
-    // ASK: what to do with numGlossySamples?
-    // ASK: Do I handle perturbed ray being below the surface right?
-    // ASK: Should radius be inversly proportional to shininess?
-
-    // Generate an initial specular ray, and base secondary glossies on this ray
-    
     const uint32_t numSamples = state.features.extra.numGlossySamples;
+
+    if (numSamples == 0) return;
     
-    // Radius of the disk
-    const float radius = 64 / hitInfo.material.shininess;
+    // Radius of the disk. 64 / shininess was too high for the provided scenes.
+    const float radius = 0.5f / hitInfo.material.shininess;
 
-    if (rayDepth >= numSamples)
-    {
-        return;
-    }
-
-    const std::array<float, 2> point = sampleDisk(radius);
-
-    //const float u_coeff = -(width / 2.0f) + point[0] * width;
-    //const float v_coeff = -(width / 2.0f) + point[1] * width;
-
+    // "Normally" reflected ray
     Ray r = generateReflectionRay(ray, hitInfo);
-
     std::array<glm::vec3, 3> basis = constructOrthonormalBasis(r.direction);
 
-    Ray perturbedRay;
-    perturbedRay.direction = glm::normalize(basis[0] + point[0] * basis[1] + point[1] * basis[2]);
+    glm::vec3 accumulatedColor {};
 
-    if (glm::dot(perturbedRay.direction, hitInfo.normal) <= 0)
+    for (int i = 0; i < numSamples; i++)
     {
-        return;
+        const std::array<float, 2> point = sampleDisk(state, radius);
+
+        Ray perturbedRay;
+        perturbedRay.direction = glm::normalize(basis[0] + point[0] * basis[1] + point[1] * basis[2]);
+
+        if (glm::dot(perturbedRay.direction, hitInfo.normal) <= 0) 
+        {
+            continue;
+        }
+
+        perturbedRay.origin = r.origin + 0.0001f * perturbedRay.direction;
+        perturbedRay.t = std::numeric_limits<float>::max();
+
+        accumulatedColor += hitInfo.material.ks * renderRay(state, perturbedRay, rayDepth + 1);
     }
+    
+    hitColor += accumulatedColor / float(numSamples);
 
-    perturbedRay.origin = r.origin;
-    perturbedRay.t = std::numeric_limits<float>::max();
+    // Visual debug
+    HitInfo hitInfoCopy = hitInfo;
+    state.bvh.intersect(state, r, hitInfoCopy);
+    drawRay(r, glm::vec3 { 0.5f, 0.0f, 0.8f });
 
-    renderRay(state, perturbedRay, rayDepth + 1);
+    const float sphereDistFactor = 0.3f;
+    const glm::vec3 sphereColor = glm::vec3 { 0.75f, 0.85f, 0.0f };
+    drawSphere(r.origin + sphereDistFactor * basis[0], sphereDistFactor * radius, sphereColor);
 }
 
 // TODO; Extra feature

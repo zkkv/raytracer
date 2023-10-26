@@ -40,6 +40,26 @@ void renderImageWithMotionBlur(const Scene& scene, const BVHInterface& bvh, cons
 
 }
 
+float perceivedLuminance(glm::vec3 colors)
+{
+    // Coefficients for calculation of perceived luminance
+    const float c_R = 0.2126f;
+    const float c_G = 0.7152f;
+    const float c_B = 0.0722f;
+    return c_R * colors.r + c_G * colors.g + c_B * colors.b;
+}
+
+void applyThreshold(std::vector<glm::vec3>& image, const float threshold)
+{
+    for (size_t i = 0; i < image.size(); i++)
+    {
+        if (perceivedLuminance(image[i]) < threshold)
+        {
+            image[i] = glm::vec3 { 0.0f };
+        }
+    }
+}
+
 uint64_t binomial(const int n, const int k)
 {
     if (k == 0)
@@ -49,14 +69,6 @@ uint64_t binomial(const int n, const int k)
     return (n * binomial(n - 1, k - 1)) / k;
 }
 
-float perceivedLuminance(glm::vec3 colors)
-{
-    // Coefficients for calculation of perceived luminance
-    const float c_R = 0.2126f;
-    const float c_G = 0.7152f;
-    const float c_B = 0.0722f;
-    return c_R * colors.r + c_G * colors.g + c_B * colors.b;
-}
 //
 //template<int K>
 //std::array<std::array<glm::vec3, K>, K>& computeGaussianFilter(int K)
@@ -116,7 +128,7 @@ std::vector<std::vector<glm::vec3>> generateGaussianFilter(const int K)
 void applyFilterToPixel(const size_t i, 
                         const size_t j, 
                         Screen& image, 
-                        const std::vector<glm::vec3>& imageCopy,
+                        std::vector<glm::vec3>& imageCopy,
                         const std::vector<std::vector<glm::vec3>>& filter,
                         const size_t filterSize)
 {
@@ -130,7 +142,8 @@ void applyFilterToPixel(const size_t i,
             updated += imageCopy[index] * filter[i - y + filterSize][j - x + filterSize];
         }
     }
-    image.setPixel(i, j, updated);
+    imageCopy[image.indexAt(i, j)] = updated;
+    //image.setPixel(i, j, updated);
 }
 
 // TODO; Extra feature
@@ -144,24 +157,32 @@ void postprocessImageWithBloom(const Scene& scene, const Features& features, con
     // TODO: thresholds
     // TODO: Handle boundaries
     // TODO: Make separable
-    // ADVICE: Make a copy -> Set all values below threshold to zero -> add two images (maybe multiply the thresheld image by a number < 1)
+    // TODO: Refactor applyFilter function
+    // ADVICE: Make a copy -> Set all values below threshold to zero -> 
+    //  blur that image -> add two images (maybe multiply the thresheld image by a number < 1)
     // ADVICE: See render.cpp: #pragma omp parallel for schedule(guided) to parallelize the for loop (if you have time)
     // ADVICE: For visual debug show the thresheld picture
     // ADVICE: For boundaries pad with a constant color (e.g. 0)
 
-    if (!features.extra.enableBloomEffect) {
+    if (!features.extra.enableBloomEffect) 
+    {
         return;
     }
 
-    const std::vector<glm::vec3> imageCopy = image.pixels();
+    std::vector<glm::vec3> imageCopy = image.pixels();
+    const float threshold = 0.7f;
+
+    // Set all values below threshold to 0
+    applyThreshold(imageCopy, threshold);
+
     const size_t SIZE = imageCopy.size();
     const int width = image.resolution().x;
     const int height = image.resolution().y;
     //const int variance = 1;
     //const float norm = 1 / (2 * glm::pi<float>() * variance);
     //const int K = int(2 * glm::pi<float>() * glm::sqrt(variance));
-    const float threshold = 0.7f;
-    const int filterSize = 5;
+    
+    const int filterSize = 1;
     const int K = filterSize * 2 + 1;
 
     std::vector<glm::vec3> filtered;
@@ -219,11 +240,7 @@ void postprocessImageWithBloom(const Scene& scene, const Features& features, con
         for (int j = filterSize; j < width - filterSize; j++)
         {
             const int index = image.indexAt(i, j);
-            const glm::vec3& pixel = imageCopy[index];
-            if (perceivedLuminance(pixel) < threshold)
-            {
-                continue;
-            }
+            //const glm::vec3& pixel = imageCopy[image.indexAt(i, j)];
 
             applyFilterToPixel(i, j, image, imageCopy, filter, filterSize);
 
@@ -248,6 +265,16 @@ void postprocessImageWithBloom(const Scene& scene, const Features& features, con
          //   const int index = image.indexAt(i, j);
          //   image.setPixel(i, j, pixelsArray[index] / sum);
          //}
+    }
+
+    for (int i = filterSize; i < height - filterSize; i++) 
+    {
+        for (int j = filterSize; j < width - filterSize; j++) 
+        {
+            const int index = image.indexAt(i, j);
+            const glm::vec3 stacked = image.pixels()[index] + imageCopy[index];
+            image.setPixel(i, j, stacked);
+        }
     }
 }
 

@@ -284,9 +284,10 @@ bool intersectRayWithBVH(RenderState& state, const BVHInterface& bvh, Ray& ray, 
                 const uint32_t iRight = currentNode.rightChild();
 
                 prevT = ray.t;
+                ray.t = std::numeric_limits<float>::max();
                 const bool hasIntersectedLeft = intersectRayWithShape(nodes[iLeft].aabb, ray);
                 const float leftT = ray.t;
-                ray.t = prevT;
+                ray.t = std::numeric_limits<float>::max();
 
                 const bool hasIntersectedRight = intersectRayWithShape(nodes[iRight].aabb, ray);
                 const float rightT = ray.t;

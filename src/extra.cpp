@@ -108,9 +108,12 @@ size_t splitPrimitivesBySAHBin(const AxisAlignedBox& aabb, uint32_t axis, std::s
 {
     // TODO: Test
     // TODO: Visual debugging
-    // ASK: What should happen if nPrimitives < nBins?
-    // ASK: Do we need to compare with base cost?
-    // ASK: Should we now ignore LeafSize variable and only use heuristic?
+    // ASK: What should happen if nPrimitives < nBins? - Keep it like that.
+    // ASK: Do we need to compare with base cost? - Design choice, it's fine
+    // ASK: Should we now ignore LeafSize variable and only use heuristic? - No, don't ignore LeafSize
+    // ADVICE: Consider multiplying costs by different numbers, reflect that in the report
+    // ADVICE: Try 3-6 bins
+    // ADVICE: For visual debug there can be a method which accepts node index and/or bin number and shows the splitting
 
     /* DEBUG START */
     /*const size_t DEBUG_SIZE = 17;

@@ -164,13 +164,40 @@ void postprocessImageWithBloom(const Scene& scene, const Features& features, con
     // ADVICE: For visual debug show the thresheld picture
     // ADVICE: For boundaries pad with a constant color (e.g. 0)
 
+    const bool VISUAL_DEBUG_ON = true;
+
     if (!features.extra.enableBloomEffect) 
     {
         return;
     }
 
-    std::vector<glm::vec3> imageCopy = image.pixels();
     const float threshold = 0.7f;
+
+    // Visual debug
+    if (VISUAL_DEBUG_ON) 
+    {
+        for (int i = 0; i < image.pixels().size(); i++) 
+        {
+            const float luminance = perceivedLuminance(image.pixels()[i]);
+            if (luminance >= threshold) 
+            {
+                const float mapped = (luminance - threshold) / (1 - threshold);
+                // const float temp = luminance - threshold;
+                // image.pixels()[i] = (1 - luminance) * glm::vec3 { 0.8f, 0.0f, 0.0f } + (luminance) * glm::vec3 { 0.85f, 0.85f, 0.85f };
+                // image.pixels()[i] = (luminance) * glm::vec3 { 0.8f, 0.0f, 0.0f } + (1 - luminance) * glm::vec3 { 0.0f, 0.0f, 0.2f };
+                image.pixels()[i] = (1 - mapped) * glm::vec3 { 0.8f, 0.0f, 0.0f } + (mapped)*glm::vec3 { 0.85f, 0.85f, 0.85f };
+            } else 
+            {
+                // const float temp = luminance;
+                // image.pixels()[i] = (1 - temp) * glm::vec3 { 0.0f, 0.0f, 0.2f } + temp * glm::vec3 { 1.0f, 1.0f, 1.0f };
+                image.pixels()[i] = glm::vec3 { 0.0f, 0.0f, 0.2f };
+            }
+            /*image.pixels()[i] = luminance * glm::vec3 { 0.8f, 0.0f, 0.0f } + (1.0f - luminance) * glm::vec3 {0.0f, 0.4f, 0.7f}; */
+        }
+        return;
+    }
+
+    std::vector<glm::vec3> imageCopy = image.pixels();
 
     // Set all values below threshold to 0
     applyThreshold(imageCopy, threshold);

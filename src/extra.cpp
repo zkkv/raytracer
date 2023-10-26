@@ -98,7 +98,7 @@ void renderRayGlossyComponent(RenderState& state, Ray ray, const HitInfo& hitInf
 {
     const uint32_t numSamples = state.features.extra.numGlossySamples;
 
-    if (numSamples == 0) return;
+    if (numSamples <= 0) return;
     
     // Radius of the disk. 64 / shininess was too high for the provided scenes.
     const float radius = 0.5f / hitInfo.material.shininess;

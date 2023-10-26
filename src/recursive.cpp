@@ -35,8 +35,27 @@ glm::vec3 renderRay(RenderState& state, Ray ray, int rayDepth)
     // Given an intersection, estimate the contribution of scene lights at this intersection
     glm::vec3 Lo = computeLightContribution(state, ray, hitInfo);
 
+    // DEBUG CODE v
     // Draw an example debug ray for the incident ray (feel free to modify this for yourself)
-    drawRay(ray, glm::vec3(1.0f));
+    // drawRay(ray, glm::vec3(1.0f));
+    glm::vec3 colors[] = {
+        { 1.f, 1.f, 1.f },
+        { 1.f, 0.f, 0.f },
+        { 0.5f, 0.5f, 0.f },
+        { 0.f, 1.f, 0.f },
+        { 0.f, 0.5f, 0.5f },
+        { 0.f, 0.f, 1.f },
+    };
+
+    Ray normalRay {};
+    normalRay.origin = ray.origin + ray.direction * ray.t;
+    normalRay.direction = hitInfo.normal;
+    normalRay.t = 0.5f;
+    drawRay(normalRay, glm::vec3(0.8f));
+
+    drawRay(ray, colors[rayDepth]); // changes color of debug ray in rasterization mode depending on the ray depth at each intersection
+
+    // DEBUG CODE ^
 
     // Given that recursive components are enabled, and we have not exceeded maximum depth,
     // estimate the contribution along these components
@@ -73,7 +92,14 @@ Ray generateReflectionRay(Ray ray, HitInfo hitInfo)
 {
     // TODO: generate a mirrored ray
     //       if you use glm::reflect, you will not get points for this method!
-    return Ray {};
+
+    Ray reflected = Ray {};
+    reflected.origin = ray.origin + ray.t * ray.direction;
+    reflected.direction = ray.direction - 2.f * glm::dot(ray.direction, hitInfo.normal) * hitInfo.normal;
+
+    reflected.origin = reflected.origin + 0.00001f * reflected.direction; // offset to reduce noise
+
+    return reflected;
 }
 
 // TODO: Standard feature
@@ -86,7 +112,14 @@ Ray generateReflectionRay(Ray ray, HitInfo hitInfo)
 Ray generatePassthroughRay(Ray ray, HitInfo hitInfo)
 {
     // TODO: generate a passthrough ray
-    return Ray {};
+
+    Ray passthrough = Ray {};
+    passthrough.origin = ray.origin + ray.t * ray.direction;
+    passthrough.direction = ray.direction;
+
+    passthrough.origin = passthrough.origin + 0.00001f * passthrough.direction; // offset to reduce noise
+
+    return passthrough;
 }
 
 // TODO: standard feature
@@ -103,7 +136,10 @@ void renderRaySpecularComponent(RenderState& state, Ray ray, const HitInfo& hitI
 {
     // TODO; you should first implement generateReflectionRay()
     Ray r = generateReflectionRay(ray, hitInfo);
-    // ...
+
+    glm::vec3 specularColor = renderRay(state, r, rayDepth + 1);
+
+    hitColor += specularColor * hitInfo.material.ks;
 }
 
 // TODO: standard feature
@@ -120,5 +156,8 @@ void renderRayTransparentComponent(RenderState& state, Ray ray, const HitInfo& h
 {
     // TODO; you should first implement generatePassthroughRay()
     Ray r = generatePassthroughRay(ray, hitInfo);
-    // ...
+
+    glm::vec3 passthroughColor = renderRay(state, r, rayDepth + 1);
+
+    hitColor += passthroughColor * (1.f - hitInfo.material.transparency);
 }

@@ -128,7 +128,7 @@ std::vector<std::vector<glm::vec3>> outerProduct(std::vector<glm::vec3>& vector)
     return result;
 }
 
-std::vector<std::vector<glm::vec3>> generateGaussianFilter(const int K)
+std::vector<glm::vec3> generateGaussianFilter(const int K)
 {
     std::vector<glm::vec3> oneDim;
     oneDim.reserve(K);
@@ -145,27 +145,39 @@ std::vector<std::vector<glm::vec3>> generateGaussianFilter(const int K)
         oneDim[i] /= sum;
     }
 
-    return outerProduct(oneDim);
+    return oneDim;
 }
 
 void applyFilterToPixel(const size_t i, 
                         const size_t j, 
-                        Screen& image, 
+                        const Screen& image, 
                         std::vector<glm::vec3>& imageCopy,
-                        const std::vector<std::vector<glm::vec3>>& filter,
-                        const size_t filterSize)
+                        const std::vector<glm::vec3>& filter,
+                        const size_t filterSize,
+                        const bool toRow)
 {
     //const auto& pixelArray = image.pixels();
-    glm::vec3 updated { 0.0f };
-    for (int y = i - filterSize; y <= i + filterSize; y++)
+    if (toRow)
     {
-        for (int x = j - filterSize; x <= j + filterSize; x++)
+        glm::vec3 updated { 0.0f };
+        for (size_t col = j - filterSize; col <= j + filterSize; col++) 
         {
-            const size_t index = image.indexAt(y, x);
-            updated += imageCopy[index] * filter[i - y + filterSize][j - x + filterSize];
+            const size_t index = image.indexAt(i, col);
+            updated += imageCopy[index] * filter[j - col + filterSize];
         }
+        imageCopy[image.indexAt(i, j)] = updated;
     }
-    imageCopy[image.indexAt(i, j)] = updated;
+    else
+    {
+        glm::vec3 updated { 0.0f };
+        for (size_t row = i - filterSize; row <= i + filterSize; row++) 
+        {
+            const size_t index = image.indexAt(row, j);
+            updated += imageCopy[index] * filter[i - row + filterSize];
+        }
+        imageCopy[image.indexAt(i, j)] = updated;
+    }
+
     //image.setPixel(i, j, updated);
 }
 
@@ -182,6 +194,7 @@ void postprocessImageWithBloom(const Scene& scene, const Features& features, con
     // TODO: Make separable
     // TODO: Refactor applyFilter function
     // TODO: Remove bunch of comments
+    // TODO: Maybe replace sum with powers of 2
     // ADVICE: Make a copy -> Set all values below threshold to zero -> 
     //  blur that image -> add two images (maybe multiply the thresheld image by a number < 1)
     // ADVICE: See render.cpp: #pragma omp parallel for schedule(guided) to parallelize the for loop (if you have time)
@@ -221,12 +234,12 @@ void postprocessImageWithBloom(const Scene& scene, const Features& features, con
     const int filterSize = features.extra.bloomFilterSize;
     const int K = filterSize * 2 + 1;
 
-    std::vector<glm::vec3> filtered;
-    filtered.reserve(SIZE);
+    //std::vector<glm::vec3> filtered;
+    //filtered.reserve(SIZE);
 
     //const std::array<std::array<glm::vec3, K>, K>& filter = computeGaussianFilter<K>(K);
 
-    std::vector<std::vector<glm::vec3>> filter = generateGaussianFilter(K);
+    std::vector<glm::vec3> filter1d = generateGaussianFilter(K);
 
     /*std::array<std::array<glm::vec3, K>, K> filter;
     for (int i = 0; i < K; i++)
@@ -270,15 +283,15 @@ void postprocessImageWithBloom(const Scene& scene, const Features& features, con
     }
     std::cout << std::endl;*/
 
-    for (int i = filterSize; i < height - filterSize; i++)
+    for (size_t i = filterSize; i < height - filterSize; i++)
     {
         //glm::vec3 sum {0.0f};
-        for (int j = filterSize; j < width - filterSize; j++)
+        for (size_t j = filterSize; j < width - filterSize; j++)
         {
-            const int index = image.indexAt(i, j);
+            //const int index = image.indexAt(i, j);
             //const glm::vec3& pixel = imageCopy[image.indexAt(i, j)];
 
-            applyFilterToPixel(i, j, image, imageCopy, filter, filterSize);
+            applyFilterToPixel(i, j, image, imageCopy, filter1d, filterSize, true);
 
             //printVector(imageCopy[index]);
             //printVector(image.pixels()[index]);
@@ -301,6 +314,14 @@ void postprocessImageWithBloom(const Scene& scene, const Features& features, con
          //   const int index = image.indexAt(i, j);
          //   image.setPixel(i, j, pixelsArray[index] / sum);
          //}
+    }
+
+    for (size_t j = filterSize; j < width - filterSize; j++) 
+    {
+        for (size_t i = filterSize; i < height - filterSize; i++) 
+        {
+            applyFilterToPixel(i, j, image, imageCopy, filter1d, filterSize, false);
+        }
     }
 
     const float bloomFactor = features.extra.bloomFilterIntensity;

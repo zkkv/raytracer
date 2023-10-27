@@ -69,6 +69,9 @@ struct ExtraFeatures {
     bool enableMotionBlur = false;
 
     bool enableBloomEffectDebug = false;
+    uint32_t bloomFilterSize = 1;
+    float bloomFilterThreshold = 0.5f;
+    float bloomFilterIntensity = 0.05f;
 
     // Parameters for glossy reflection
     uint32_t numGlossySamples = 1;

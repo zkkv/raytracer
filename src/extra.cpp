@@ -197,7 +197,7 @@ void postprocessImageWithBloom(const Scene& scene, const Features& features, con
         return;
     }
 
-    const float threshold = 0.7f;
+    const float threshold = features.extra.bloomFilterThreshold;
 
     // Visual debug
     if (features.extra.enableBloomEffectDebug) 
@@ -218,7 +218,7 @@ void postprocessImageWithBloom(const Scene& scene, const Features& features, con
     //const float norm = 1 / (2 * glm::pi<float>() * variance);
     //const int K = int(2 * glm::pi<float>() * glm::sqrt(variance));
     
-    const int filterSize = 6;
+    const int filterSize = features.extra.bloomFilterSize;
     const int K = filterSize * 2 + 1;
 
     std::vector<glm::vec3> filtered;
@@ -303,12 +303,13 @@ void postprocessImageWithBloom(const Scene& scene, const Features& features, con
          //}
     }
 
+    const float bloomFactor = features.extra.bloomFilterIntensity;
     for (int i = filterSize; i < height - filterSize; i++) 
     {
         for (int j = filterSize; j < width - filterSize; j++) 
         {
             const int index = image.indexAt(i, j);
-            const glm::vec3 stacked = image.pixels()[index] + imageCopy[index];
+            const glm::vec3 stacked = image.pixels()[index] + imageCopy[index] * bloomFactor;
             image.setPixel(i, j, stacked);
         }
     }

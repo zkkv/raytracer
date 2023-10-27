@@ -163,7 +163,7 @@ void applyFilterToPixel(const size_t i,
         for (size_t col = j - filterSize; col <= j + filterSize; col++) 
         {
             const size_t index = image.indexAt(i, col);
-            updated += imageCopy[index] * filter[j - col + filterSize];
+            updated += imageCopy[index] * filter[col - j + filterSize];
         }
         imageCopy[image.indexAt(i, j)] = updated;
     }
@@ -173,7 +173,7 @@ void applyFilterToPixel(const size_t i,
         for (size_t row = i - filterSize; row <= i + filterSize; row++) 
         {
             const size_t index = image.indexAt(row, j);
-            updated += imageCopy[index] * filter[i - row + filterSize];
+            updated += imageCopy[index] * filter[row - i + filterSize];
         }
         imageCopy[image.indexAt(i, j)] = updated;
     }

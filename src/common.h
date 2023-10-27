@@ -53,7 +53,7 @@ struct SegmentLight {
 };
 
 struct ParallelogramLight {
-    // A parallelogram light (see figure 3.14 of chapter 13.4.2 of Fundamentals of CG 4th Edition)
+    // A parallelogram light (see figure 13.14 of chapter 13.4.2 of Fundamentals of CG 4th Edition)
     glm::vec3 v0; // v0
     glm::vec3 edge01, edge02; // edges from v0 to v1, and from v0 to v2
     glm::vec3 color0, color1, color2, color3;

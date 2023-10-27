@@ -270,7 +270,11 @@ int main(int argc, char** argv)
             }
             if (config.features.extra.enableBloomEffect)
             {
-                ImGui::Checkbox("Bloom effect debug", &config.features.extra.enableBloomEffectDebug);
+                ImGui::Spacing();
+                ImGui::Text("One option at a time");
+                ImGui::Checkbox("Show values above threshold", &config.features.extra.enableBloomShowAboveThreshold);
+                ImGui::Checkbox("Show blurred mask", &config.features.extra.enableBloomShowBlurredMask);
+                ImGui::Spacing();
             }
 
             ImGui::Spacing();

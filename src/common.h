@@ -68,7 +68,8 @@ struct ExtraFeatures {
     bool enableMipmapTextureFiltering = false;
     bool enableMotionBlur = false;
 
-    bool enableBloomEffectDebug = false;
+    bool enableBloomShowAboveThreshold = false;
+    bool enableBloomShowBlurredMask = false;
     uint32_t bloomFilterSize = 1;
     float bloomFilterThreshold = 0.5f;
     float bloomFilterIntensity = 0.05f;

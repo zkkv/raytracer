@@ -60,7 +60,7 @@ void applyThreshold(std::vector<glm::vec3>& image, const float threshold)
     }
 }
 
-void renderBloomDebug(Screen& image, const float threshold)
+void renderBloomAboveThreshold(Screen& image, const float threshold)
 {
     for (int i = 0; i < image.pixels().size(); i++) 
     {
@@ -80,6 +80,13 @@ void renderBloomDebug(Screen& image, const float threshold)
             image.pixels()[i] = glm::vec3 { 0.0f, 0.0f, 0.2f };
         }
         /*image.pixels()[i] = luminance * glm::vec3 { 0.8f, 0.0f, 0.0f } + (1.0f - luminance) * glm::vec3 {0.0f, 0.4f, 0.7f}; */
+    }
+}
+
+void renderBloomBlurredMask(Screen& image, const std::vector<glm::vec3>& mask)
+{
+    for (int i = 0; i < image.pixels().size(); i++) {
+        image.pixels()[i] = mask[i];
     }
 }
 
@@ -148,7 +155,7 @@ std::vector<glm::vec3> generateGaussianFilter(const int K)
     return oneDim;
 }
 
-void applyFilterToPixel(const size_t i, 
+void applyFilter1dToPixel(const size_t i, 
                         const size_t j, 
                         const Screen& image, 
                         std::vector<glm::vec3>& imageCopy,
@@ -213,9 +220,9 @@ void postprocessImageWithBloom(const Scene& scene, const Features& features, con
     const float threshold = features.extra.bloomFilterThreshold;
 
     // Visual debug
-    if (features.extra.enableBloomEffectDebug) 
+    if (features.extra.enableBloomShowAboveThreshold) 
     {
-        renderBloomDebug(image, threshold);
+        renderBloomAboveThreshold(image, threshold);
         return;
     }
 
@@ -291,7 +298,7 @@ void postprocessImageWithBloom(const Scene& scene, const Features& features, con
             //const int index = image.indexAt(i, j);
             //const glm::vec3& pixel = imageCopy[image.indexAt(i, j)];
 
-            applyFilterToPixel(i, j, image, imageCopy, filter1d, filterSize, true);
+            applyFilter1dToPixel(i, j, image, imageCopy, filter1d, filterSize, true);
 
             //printVector(imageCopy[index]);
             //printVector(image.pixels()[index]);
@@ -320,8 +327,14 @@ void postprocessImageWithBloom(const Scene& scene, const Features& features, con
     {
         for (size_t i = filterSize; i < height - filterSize; i++) 
         {
-            applyFilterToPixel(i, j, image, imageCopy, filter1d, filterSize, false);
+            applyFilter1dToPixel(i, j, image, imageCopy, filter1d, filterSize, false);
         }
+    }
+
+    // Visual debug
+    if (features.extra.enableBloomShowBlurredMask) {
+        renderBloomBlurredMask(image, imageCopy);
+        return;
     }
 
     const float bloomFactor = features.extra.bloomFilterIntensity;

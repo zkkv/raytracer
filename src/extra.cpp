@@ -60,6 +60,29 @@ void applyThreshold(std::vector<glm::vec3>& image, const float threshold)
     }
 }
 
+void renderBloomDebug(Screen& image, const float threshold)
+{
+    for (int i = 0; i < image.pixels().size(); i++) 
+    {
+        const float luminance = perceivedLuminance(image.pixels()[i]);
+        if (luminance >= threshold) 
+        {
+            const float mapped = (luminance - threshold) / (1 - threshold);
+            // const float temp = luminance - threshold;
+            // image.pixels()[i] = (1 - luminance) * glm::vec3 { 0.8f, 0.0f, 0.0f } + (luminance) * glm::vec3 { 0.85f, 0.85f, 0.85f };
+            // image.pixels()[i] = (luminance) * glm::vec3 { 0.8f, 0.0f, 0.0f } + (1 - luminance) * glm::vec3 { 0.0f, 0.0f, 0.2f };
+            image.pixels()[i] = (1 - mapped) * glm::vec3 { 0.8f, 0.0f, 0.0f } + (mapped)*glm::vec3 { 0.85f, 0.85f, 0.85f };
+        } 
+        else 
+        {
+            // const float temp = luminance;
+            // image.pixels()[i] = (1 - temp) * glm::vec3 { 0.0f, 0.0f, 0.2f } + temp * glm::vec3 { 1.0f, 1.0f, 1.0f };
+            image.pixels()[i] = glm::vec3 { 0.0f, 0.0f, 0.2f };
+        }
+        /*image.pixels()[i] = luminance * glm::vec3 { 0.8f, 0.0f, 0.0f } + (1.0f - luminance) * glm::vec3 {0.0f, 0.4f, 0.7f}; */
+    }
+}
+
 uint64_t binomial(const int n, const int k)
 {
     if (k == 0)
@@ -158,13 +181,16 @@ void postprocessImageWithBloom(const Scene& scene, const Features& features, con
     // TODO: Handle boundaries
     // TODO: Make separable
     // TODO: Refactor applyFilter function
+    // TODO: Remove bunch of comments
     // ADVICE: Make a copy -> Set all values below threshold to zero -> 
     //  blur that image -> add two images (maybe multiply the thresheld image by a number < 1)
     // ADVICE: See render.cpp: #pragma omp parallel for schedule(guided) to parallelize the for loop (if you have time)
     // ADVICE: For visual debug show the thresheld picture
     // ADVICE: For boundaries pad with a constant color (e.g. 0)
 
-    const bool VISUAL_DEBUG_ON = true;
+    const bool VISUAL_DEBUG_ON = false;
+
+
 
     if (!features.extra.enableBloomEffect) 
     {
@@ -174,26 +200,9 @@ void postprocessImageWithBloom(const Scene& scene, const Features& features, con
     const float threshold = 0.7f;
 
     // Visual debug
-    if (VISUAL_DEBUG_ON) 
+    if (features.extra.enableBloomEffectDebug) 
     {
-        for (int i = 0; i < image.pixels().size(); i++) 
-        {
-            const float luminance = perceivedLuminance(image.pixels()[i]);
-            if (luminance >= threshold) 
-            {
-                const float mapped = (luminance - threshold) / (1 - threshold);
-                // const float temp = luminance - threshold;
-                // image.pixels()[i] = (1 - luminance) * glm::vec3 { 0.8f, 0.0f, 0.0f } + (luminance) * glm::vec3 { 0.85f, 0.85f, 0.85f };
-                // image.pixels()[i] = (luminance) * glm::vec3 { 0.8f, 0.0f, 0.0f } + (1 - luminance) * glm::vec3 { 0.0f, 0.0f, 0.2f };
-                image.pixels()[i] = (1 - mapped) * glm::vec3 { 0.8f, 0.0f, 0.0f } + (mapped)*glm::vec3 { 0.85f, 0.85f, 0.85f };
-            } else 
-            {
-                // const float temp = luminance;
-                // image.pixels()[i] = (1 - temp) * glm::vec3 { 0.0f, 0.0f, 0.2f } + temp * glm::vec3 { 1.0f, 1.0f, 1.0f };
-                image.pixels()[i] = glm::vec3 { 0.0f, 0.0f, 0.2f };
-            }
-            /*image.pixels()[i] = luminance * glm::vec3 { 0.8f, 0.0f, 0.0f } + (1.0f - luminance) * glm::vec3 {0.0f, 0.4f, 0.7f}; */
-        }
+        renderBloomDebug(image, threshold);
         return;
     }
 
@@ -209,7 +218,7 @@ void postprocessImageWithBloom(const Scene& scene, const Features& features, con
     //const float norm = 1 / (2 * glm::pi<float>() * variance);
     //const int K = int(2 * glm::pi<float>() * glm::sqrt(variance));
     
-    const int filterSize = 1;
+    const int filterSize = 6;
     const int K = filterSize * 2 + 1;
 
     std::vector<glm::vec3> filtered;

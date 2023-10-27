@@ -194,6 +194,7 @@ int main(int argc, char** argv)
                 if (config.features.extra.enableBloomEffect) {
                     ImGui::Indent();
                     // Add bloom settings here, if necessary
+                    ImGui::Checkbox("Bloom effect debug", &config.features.extra.enableBloomEffectDebug);
                     ImGui::Unindent();
                 }
                 ImGui::Checkbox("Depth of field", &config.features.extra.enableDepthOfField);

@@ -91,8 +91,8 @@ void renderBloomBlurredMask(Screen& image, const Screen& mask, const uint32_t fi
     {
         for (size_t y = 0; y < height; y++) 
         {
-            const int index = mask.indexAt(x + filterSize, y + filterSize);
-            image.setPixel(x, y, msk[index]);
+            const int indexPadded = mask.indexAt(x + filterSize, y + filterSize);
+            image.setPixel(x, y, msk[indexPadded]);
         }
     }
 }
@@ -195,20 +195,9 @@ void applyFilter1dToPixel(const size_t xOriginal,
 void postprocessImageWithBloom(const Scene& scene, const Features& features, const Trackball& camera, Screen& image)
 {
     // TODO: Test
-    // TODO: visual debug
-    // TODO: thresholds
-    // TODO: Handle boundaries
-    // TODO: Make separable
-    // TODO: Refactor applyFilter function
     // TODO: Remove bunch of comments
-    // TODO: consider different return type for binomial()
     // TODO: Maybe replace sum with powers of 2
-    // TODO: Increasing filter size makes the blur go up and to the right
-    // ADVICE: Make a copy -> Set all values below threshold to zero -> 
-    //  blur that image -> add two images (maybe multiply the thresheld image by a number < 1)
     // ADVICE: See render.cpp: #pragma omp parallel for schedule(guided) to parallelize the for loop (if you have time)
-    // ADVICE: For visual debug show the thresheld picture
-    // ADVICE: For boundaries pad with a constant color (e.g. 0)
 
     if (!features.extra.enableBloomEffect) 
     {
@@ -239,13 +228,6 @@ void postprocessImageWithBloom(const Scene& scene, const Features& features, con
     //imageCopy.writeBitmapToFile("D:/copy_thr.bmp");
 
     std::vector<glm::vec3> filter1d = generateGaussianFilter(filterSize);
-
-
-    //for (int i = 0; i < K; i++)
-    //{
-    //   std::cout << filter1d[i].x << "\t\t"; 
-    //}
-    //std::cout << std::endl;
 
     const uint32_t width = image.resolution().x;
     const uint32_t height = image.resolution().y;
@@ -284,10 +266,10 @@ void postprocessImageWithBloom(const Scene& scene, const Features& features, con
     {
         for (int y = 0; y < height; y++) 
         {
-            const int origIndex = image.indexAt(x, y);
-            const int padIndex = imageCopy.indexAt(x + filterSize, y + filterSize);
-            const glm::vec3 stacked = image.pixels()[origIndex] + imageCopy.pixels()[padIndex] * bloomFactor;
-            image.setPixel(x, y, stacked);
+            const int indexOriginal = image.indexAt(x, y);
+            const int indexPadded = imageCopy.indexAt(x + filterSize, y + filterSize);
+            const glm::vec3 combined = image.pixels()[indexOriginal] + imageCopy.pixels()[indexPadded] * bloomFactor;
+            image.setPixel(x, y, combined);
         }
     }
 

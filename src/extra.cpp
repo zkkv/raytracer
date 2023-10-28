@@ -170,13 +170,8 @@ glm::vec3 sampleEnvironmentMap(RenderState& state, Ray ray)
 
 float calculateAABBSurfaceArea(const AxisAlignedBox& aabb)
 {
-    // TODO: Test
-    // TODO: make simpler
     const glm::vec3 axes = glm::abs(aabb.upper - aabb.lower);
-    const float S1 = axes.x * axes.y;
-    const float S2 = axes.x * axes.z;
-    const float S3 = axes.y * axes.z;
-    return 2 * (S1 + S2 + S3);
+    return 2 * (axes.x * axes.y + axes.x * axes.z + axes.y * axes.z);
 }
 
 // TODO: Extra feature
@@ -212,7 +207,7 @@ size_t splitPrimitivesBySAHBin(const AxisAlignedBox& aabb, uint32_t axis, std::s
     using Primitive = BVH::Primitive;
 
     const size_t N = primitives.size();
-    size_t nBins = 10;
+    size_t nBins = 30;
 
     // Not sure what to do in this case
     if (N < nBins)

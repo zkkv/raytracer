@@ -195,8 +195,6 @@ void applyFilter1dToPixel(const size_t xOriginal,
 // not go on a hunting expedition for your implementation, so please keep it here!
 void postprocessImageWithBloom(const Scene& scene, const Features& features, const Trackball& camera, Screen& image)
 {
-    // TODO: Test
-    // ADVICE: See render.cpp: #pragma omp parallel for schedule(guided) to parallelize the for loop (if you have time)
 
     if (!features.extra.enableBloomEffect) 
     {

@@ -63,24 +63,19 @@ void applyThreshold(Screen& image, const float threshold)
 
 void renderBloomAboveThreshold(Screen& image, const float threshold)
 {
-    for (int i = 0; i < image.pixels().size(); i++) 
+    std::vector<glm::vec3>& img = image.pixels();
+    for (size_t i = 0; i < img.size(); i++) 
     {
-        const float luminance = perceivedLuminance(image.pixels()[i]);
-        if (luminance >= threshold) 
+        const float luminance = perceivedLuminance(img[i]);
+        if (luminance >= threshold && threshold < 1) 
         {
             const float mapped = (luminance - threshold) / (1 - threshold);
-            // const float temp = luminance - threshold;
-            // image.pixels()[i] = (1 - luminance) * glm::vec3 { 0.8f, 0.0f, 0.0f } + (luminance) * glm::vec3 { 0.85f, 0.85f, 0.85f };
-            // image.pixels()[i] = (luminance) * glm::vec3 { 0.8f, 0.0f, 0.0f } + (1 - luminance) * glm::vec3 { 0.0f, 0.0f, 0.2f };
-            image.pixels()[i] = (1 - mapped) * glm::vec3 { 0.8f, 0.0f, 0.0f } + (mapped)*glm::vec3 { 0.85f, 0.85f, 0.85f };
+            img[i] = (1 - mapped) * glm::vec3 { 0.8f, 0.0f, 0.0f } + (mapped) * glm::vec3 { 0.85f, 0.85f, 0.85f };
         } 
         else 
         {
-            // const float temp = luminance;
-            // image.pixels()[i] = (1 - temp) * glm::vec3 { 0.0f, 0.0f, 0.2f } + temp * glm::vec3 { 1.0f, 1.0f, 1.0f };
-            image.pixels()[i] = glm::vec3 { 0.0f, 0.0f, 0.2f };
+            img[i] = glm::vec3 { 0.0f, 0.0f, 0.2f };
         }
-        /*image.pixels()[i] = luminance * glm::vec3 { 0.8f, 0.0f, 0.0f } + (1.0f - luminance) * glm::vec3 {0.0f, 0.4f, 0.7f}; */
     }
 }
 
@@ -104,7 +99,6 @@ void renderBloomBlurredMask(Screen& image, const Screen& mask, const uint32_t fi
 
 Screen padBorders(const Screen& image, const uint32_t filterSize)
 {
-    //std::cout << "PAD START" << std::endl;
     const glm::vec3 padding { 0.0f };
 
     const uint32_t newWidth = image.resolution().x + 2 * filterSize;
@@ -112,152 +106,86 @@ Screen padBorders(const Screen& image, const uint32_t filterSize)
 
     Screen padded(glm::ivec2(newWidth, newHeight), false);
 
-    for (uint32_t x = 0; x < newWidth; x++)
+    for (size_t x = 0; x < newWidth; x++)
     {
-        for (uint32_t y = 0; y < newHeight; y++)
+        for (size_t y = 0; y < newHeight; y++)
         {
-            //std::cout << x << " " << y << " " << x - filterSize << " " << y - filterSize;
             if ((x >= filterSize) && (x < newWidth - filterSize) && (y >= filterSize) && (y < newHeight - filterSize))
             {
-                //std::cout << " IN" << std::endl;
-                const uint32_t index = image.indexAt(x - filterSize, y - filterSize);
+                const size_t index = image.indexAt(x - filterSize, y - filterSize);
                 padded.setPixel(x, y, image.pixels()[index]);
-            }
-            else
-            {
-                //std::cout << " OUT" << std::endl;
-                padded.setPixel(x, y, padding);
             }
         }
     }
-
-    //std::cout << "PAD END\n" << std::endl;
     return padded;
 }
 
-uint64_t binomial(const int n, const int k)
+uint64_t binomial(const uint32_t n, const uint32_t k)
 {
-    if (k == 0)
+    uint32_t k_min = k > n - k ? n - k : k;
+    uint64_t coef = 1;
+
+    // Multiplicative formula
+    for (uint32_t i = 1; i <= k_min; i++) 
     {
-        return 1;
+        coef = (coef * (n - i + 1)) / i;
     }
-    return (n * binomial(n - 1, k - 1)) / k;
+
+    return coef; 
 }
 
-//
-//template<int K>
-//std::array<std::array<glm::vec3, K>, K>& computeGaussianFilter(int K)
-//{
-//    std::array<std::array<glm::vec3, K>, K> filter;
-//    for (int i = 0; i < K; i++)
-//    {
-//        for (int j = 0; k < K; j++)
-//        {
-//
-//        }
-//    }
-//    return filter;
-//}
-
-std::vector<std::vector<glm::vec3>> outerProduct(std::vector<glm::vec3>& vector)
+std::vector<glm::vec3> generateGaussianFilter(const uint32_t filterSize)
 {
-    std::vector<std::vector<glm::vec3>> result;
-    const size_t SIZE = vector.size();
-    result.resize(SIZE);
-
-    for (int i = 0; i < SIZE; i++)
-    {
-        result[i].resize(SIZE);
-    }
-
-    for (int i = 0; i < SIZE; i++)
-    {
-        for (int j = 0; j < SIZE; j++)
-        {
-            result[i][j] = vector[i] * vector[j];
-        }
-    }
-    return result;
-}
-
-std::vector<glm::vec3> generateGaussianFilter(const int K)
-{
-    std::vector<glm::vec3> oneDim;
-    oneDim.reserve(K);
+    const uint32_t radius = filterSize * 2 + 1;
+    std::vector<glm::vec3> filter;
+    filter.reserve(radius);
     glm::vec3 sum { 0.0f };
-    for (int i = 0; i < K; i++)
+
+    for (size_t i = 0; i < radius; i++)
     {
-        const glm::vec3 computed = glm::vec3 { float(binomial(K - 1, i)) };
-        oneDim.push_back(computed);
+        const glm::vec3 computed = glm::vec3 { float(binomial(radius - 1, i)) };
+        filter.push_back(computed);
         sum += computed;
     }
 
-    for (int i = 0; i < K; i++) 
+    for (size_t i = 0; i < radius; i++) 
     {
-        oneDim[i] /= sum;
+        filter[i] /= sum;
     }
 
-    return oneDim;
+    return filter;
 }
 
 void applyFilter1dToPixel(const size_t xOriginal, 
                         const size_t yOriginal,
+                        const Screen& imagePadded,
                         Screen& imageCopy,
                         const std::vector<glm::vec3>& filter,
-                        const size_t filterSize,
+                        const uint32_t filterSize,
                         const bool toRow)
 {
-    //if (xOriginal == 799 && yOriginal == 799)
-        //std::cout << "DEBUG" << std::endl;
     const size_t x = xOriginal + filterSize;
     const size_t y = yOriginal + filterSize;
-    //const auto& pixelArray = image.pixels();
-    std::vector<glm::vec3>& imgCopy = imageCopy.pixels();
+    const std::vector<glm::vec3>& imgPadded = imagePadded.pixels();
+
+    glm::vec3 updated { 0.0f };
     if (toRow)
     {
-
-        glm::vec3 updated { 0.0f };
         for (size_t col = x - filterSize; col <= x + filterSize; col++) 
         {
-            const size_t index = imageCopy.indexAt(col, y);
-            updated += imgCopy[index] * filter[col - x + filterSize];
+            const size_t index = imagePadded.indexAt(col, y);
+            updated += imgPadded[index] * filter[col - x + filterSize];
         }
-        imageCopy.setPixel(x, y, updated);
     }
     else
     {
-        glm::vec3 updated { 0.0f };
         for (size_t row = y - filterSize; row <= y + filterSize; row++) 
         {
-            const size_t index = imageCopy.indexAt(x, row);
-            updated += imgCopy[index] * filter[row - y + filterSize];
+            const size_t index = imagePadded.indexAt(x, row);
+            updated += imgPadded[index] * filter[row - y + filterSize];
         }
-        imageCopy.setPixel(x, y, updated);
     }
-
-    //if (toRow) 
-    //{
-
-    //    glm::vec3 updated { 0.0f };
-    //    for (size_t i = -filterSize; i <= filterSize; i++) {
-    //        const size_t col = x + i;
-    //        const size_t index = imageCopy.indexAt(col, y);
-    //        updated += imgCopy[index] * filter[i + filterSize];
-    //    }
-    //    imageCopy.setPixel(x, y, updated);
-    //} 
-    //else 
-    //{
-    //    glm::vec3 updated { 0.0f };
-    //    for (size_t i = -filterSize; i <= filterSize; i++) {
-    //        const size_t row = y + i;
-    //        const size_t index = imageCopy.indexAt(x, row);
-    //        updated += imgCopy[index] * filter[i + filterSize];
-    //    }
-    //    imageCopy.setPixel(x, y, updated);
-    //}
-
-    //image.setPixel(i, j, updated);
+    imageCopy.setPixel(x, y, updated);
 }
 
 // TODO; Extra feature
@@ -296,117 +224,57 @@ void postprocessImageWithBloom(const Scene& scene, const Features& features, con
         return;
     }
 
+    // This value MUST be limited by 31, otherwise integer overflow happens. I limit it to 30.
     const uint32_t filterSize = features.extra.bloomFilterSize;
-    //const uint32_t filterSize = 2;
-    const uint32_t K = filterSize * 2 + 1;
-    Screen imageCopy = padBorders(image, filterSize);
-    //Screen imageCopy = image;
+
+    Screen imagePadded = padBorders(image, filterSize);
+    Screen imageCopy = imagePadded;
+
+    //imagePadded.writeBitmapToFile("D:/padded.bmp");
+    //imageCopy.writeBitmapToFile("D:/copy_before.bmp");
 
     // Set all values below threshold to 0
     applyThreshold(imageCopy, threshold);
 
-    //const size_t SIZE = imageCopy.size();
+    //imageCopy.writeBitmapToFile("D:/copy_thr.bmp");
+
+    std::vector<glm::vec3> filter1d = generateGaussianFilter(filterSize);
+
+
+    //for (int i = 0; i < K; i++)
+    //{
+    //   std::cout << filter1d[i].x << "\t\t"; 
+    //}
+    //std::cout << std::endl;
+
     const uint32_t width = image.resolution().x;
     const uint32_t height = image.resolution().y;
 
-    const uint32_t newWidth = width + 2 * filterSize;
-    const uint32_t newHeight = height + 2 * filterSize;
-    //const int variance = 1;
-    //const float norm = 1 / (2 * glm::pi<float>() * variance);
-    //const int K = int(2 * glm::pi<float>() * glm::sqrt(variance));
-    
-    //std::vector<glm::vec3> filtered;
-    //filtered.reserve(SIZE);
-
-  //  //const std::array<std::array<glm::vec3, K>, K>& filter = computeGaussianFilter<K>(K);
-
-    std::vector<glm::vec3> filter1d = generateGaussianFilter(K);
-
-  //  /*std::array<std::array<glm::vec3, K>, K> filter;
-  //  for (int i = 0; i < K; i++)
-  //  {
-  //      glm::vec3 sum {0.0f};
-  //      for (int j = 0; j < K; j++)
-  //      {
-  //          filter[i][j] = glm::vec3 { float(binomial(K - 1, j)) };
-  //          sum += filter[i][j];
-  //      }
-  //      for (int j = 0; j < K; j++) {
-  //          filter[i][j] /= sum;
-  //      }
-  //  }
-
-  //  for (int i = 0; i < K; i++) 
-  //  {
-  //      glm::vec3 sum { 0.0f };
-  //      for (int j = 0; j < K; j++) 
-  //      {
-  //          filter[j][i] *= glm::vec3 { float(binomial(K - 1, j)) };
-  //          sum += filter[j][i];
-  //      }
-  //      for (int j = 0; j < K; j++) 
-  //      {
-  //          filter[j][i] /= sum;
-  //          std::cout << filter[i][j].x << " ";
-  //      }
-  //      std::cout << "\n";
-  //  }
-
-  //  std::cout << std::endl;*/
-
-  ///*  for (int i = 0; i < K; i++)
-  //  {
-  //      for (int j = 0; j < K; j++)
-  //      {
-  //          std::cout << filter[i][j].x << "\t\t"; 
-  //      }
-  //      std::cout << "\n";
-  //  }
-  //  std::cout << std::endl;*/
-
     for (size_t y = 0; y < height; y++)
     {
-        //glm::vec3 sum {0.0f};
         for (size_t x = 0; x < width; x++)
         {
-            //const int index = image.indexAt(i, j);
-            //const glm::vec3& pixel = imageCopy[image.indexAt(i, j)];
-
-            applyFilter1dToPixel(x, y, imageCopy, filter1d, filterSize, true);
-
-            //printVector(imageCopy[index]);
-            //printVector(image.pixels()[index]);
-            //std::cout << std::endl;
-            
-            //const float factor = binomial(width, i);
-
-            //const float debug = glm::length(pixel);
-
-            //std::cout << debug << std::endl;
-
-            //const glm::vec3 newVal = pixel * factor;
-
-            //image.setPixel(i, j, newVal);
-            //sum += newVal;
+            applyFilter1dToPixel(x, y, imagePadded, imageCopy, filter1d, filterSize, true);
         }
-        
-         //for (int j = 0; j < width; j++) 
-         //{
-         //   const int index = image.indexAt(i, j);
-         //   image.setPixel(i, j, pixelsArray[index] / sum);
-         //}
     }
+
+    imagePadded = imageCopy;
+
+    //imageCopy.writeBitmapToFile("D:/copy_one_iter.bmp");
 
     for (size_t x = 0; x < width; x++) 
     {
         for (size_t y = 0; y < height; y++) 
         {
-            applyFilter1dToPixel(x, y, imageCopy, filter1d, filterSize, false);
+            applyFilter1dToPixel(x, y, imagePadded, imageCopy, filter1d, filterSize, false);
         }
     }
 
+    //imageCopy.writeBitmapToFile("D:/copy_two_iter.bmp");
+
     // Visual debug
-    if (features.extra.enableBloomShowBlurredMask) {
+    if (features.extra.enableBloomShowBlurredMask) 
+    {
         renderBloomBlurredMask(image, imageCopy, filterSize);
         return;
     }
@@ -422,6 +290,8 @@ void postprocessImageWithBloom(const Scene& scene, const Features& features, con
             image.setPixel(x, y, stacked);
         }
     }
+
+    //image.writeBitmapToFile("D:/final_image.bmp");
 }
 
 

@@ -143,6 +143,11 @@ AxisAlignedBox computeSpanAABB(std::span<const BVHInterface::Primitive> primitiv
 // This method is unit-tested, so do not change the function signature.
 glm::vec3 computePrimitiveCentroid(const BVHInterface::Primitive primitive)
 {
+    /*
+        SOURCE:
+        Protter, Murray H.; Morrey, Charles B. Jr. (1970), College Calculus with Analytic Geometry (2nd ed.),
+        Reading: Addison-Wesley, LCCN 76087042, p. 520
+    */
     return (primitive.v0.position + primitive.v1.position + primitive.v2.position) / 3.0f;
 }
 
@@ -175,6 +180,10 @@ uint32_t computeAABBLongestAxis(const AxisAlignedBox& aabb)
 // This method is unit-tested, so do not change the function signature.
 size_t splitPrimitivesByMedian(const AxisAlignedBox& aabb, uint32_t axis, std::span<BVHInterface::Primitive> primitives)
 {
+    /*
+        SOURCE:
+        https://www.digitalocean.com/community/tutorials/sort-in-c-plus-plus
+    */
     // ASK: why is aabb passed as a parameter?
     using Primitive = BVHInterface::Primitive;
 
@@ -467,6 +476,10 @@ void BVH::buildRecursive(const Scene& scene, const Features& features, std::span
 // You are free to modify this function's signature, as long as the constructor builds a BVH
 void BVH::buildNumLevels()
 {
+    /*
+        SOURCE:
+        https://www.geeksforgeeks.org/iterative-method-to-find-height-of-binary-tree/
+    */
     std::list<BVHInterface::Node> queue;
     queue.push_back(m_nodes[0]);
 

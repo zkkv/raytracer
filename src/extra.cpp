@@ -63,11 +63,13 @@ void applyThreshold(Screen& image, const float threshold)
 
 void renderBloomAboveThreshold(Screen& image, const float threshold)
 {
+    // Renders the pixels which are above the threshold in red-white gradient.
+    // All other values are set to dark blue.
     std::vector<glm::vec3>& img = image.pixels();
     for (size_t i = 0; i < img.size(); i++) 
     {
         const float luminance = perceivedLuminance(img[i]);
-        if (luminance >= threshold && threshold < 1) 
+        if (luminance >= threshold) 
         {
             const float mapped = (luminance - threshold) / (1 - threshold);
             img[i] = (1 - mapped) * glm::vec3 { 0.8f, 0.0f, 0.0f } + (mapped) * glm::vec3 { 0.85f, 0.85f, 0.85f };
@@ -99,8 +101,7 @@ void renderBloomBlurredMask(Screen& image, const Screen& mask, const uint32_t fi
 
 Screen padBorders(const Screen& image, const uint32_t filterSize)
 {
-    const glm::vec3 padding { 0.0f };
-
+    // Padding borders with black color (default color in Screen constructor)
     const uint32_t newWidth = image.resolution().x + 2 * filterSize;
     const uint32_t newHeight = image.resolution().y + 2 * filterSize;
 
@@ -195,8 +196,6 @@ void applyFilter1dToPixel(const size_t xOriginal,
 void postprocessImageWithBloom(const Scene& scene, const Features& features, const Trackball& camera, Screen& image)
 {
     // TODO: Test
-    // TODO: Remove bunch of comments
-    // TODO: Maybe replace sum with powers of 2
     // ADVICE: See render.cpp: #pragma omp parallel for schedule(guided) to parallelize the for loop (if you have time)
 
     if (!features.extra.enableBloomEffect) 
@@ -216,22 +215,22 @@ void postprocessImageWithBloom(const Scene& scene, const Features& features, con
     // This value MUST be limited by 31, otherwise integer overflow happens. I limit it to 30.
     const uint32_t filterSize = features.extra.bloomFilterSize;
 
+    // imagePadded is used as an untouched copy in filtering
     Screen imagePadded = padBorders(image, filterSize);
-    Screen imageCopy = imagePadded;
-
-    //imagePadded.writeBitmapToFile("D:/padded.bmp");
-    //imageCopy.writeBitmapToFile("D:/copy_before.bmp");
 
     // Set all values below threshold to 0
-    applyThreshold(imageCopy, threshold);
+    applyThreshold(imagePadded, threshold);
 
-    //imageCopy.writeBitmapToFile("D:/copy_thr.bmp");
-
+    // imageCopy is the one that changes
+    Screen imageCopy = imagePadded;
+    
+    // One-dimensional binomial (Gaussian) filter
     std::vector<glm::vec3> filter1d = generateGaussianFilter(filterSize);
 
     const uint32_t width = image.resolution().x;
     const uint32_t height = image.resolution().y;
 
+    // Filter is separable, so we can first go through all rows, then all columns
     for (size_t y = 0; y < height; y++)
     {
         for (size_t x = 0; x < width; x++)
@@ -240,9 +239,8 @@ void postprocessImageWithBloom(const Scene& scene, const Features& features, con
         }
     }
 
+    // Second traversal should be done on the result of the first one
     imagePadded = imageCopy;
-
-    //imageCopy.writeBitmapToFile("D:/copy_one_iter.bmp");
 
     for (size_t x = 0; x < width; x++) 
     {
@@ -251,8 +249,6 @@ void postprocessImageWithBloom(const Scene& scene, const Features& features, con
             applyFilter1dToPixel(x, y, imagePadded, imageCopy, filter1d, filterSize, false);
         }
     }
-
-    //imageCopy.writeBitmapToFile("D:/copy_two_iter.bmp");
 
     // Visual debug
     if (features.extra.enableBloomShowBlurredMask) 

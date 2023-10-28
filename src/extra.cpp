@@ -96,6 +96,16 @@ std::array<float, 2> sampleDisk(RenderState& state, const float radius = 1.0f)
 // not go on a hunting expedition for your implementation, so please keep it here!
 void renderRayGlossyComponent(RenderState& state, Ray ray, const HitInfo& hitInfo, glm::vec3& hitColor, int rayDepth)
 {
+    /*
+        SOURCES:
+        Sampling uniformly on a disk: https://stackoverflow.com/questions/5837572/generate-a-random-point-within-a-circle-uniformly
+       
+        Creating perturbed rays: Marschner, S.; Shirley, P. Fundamentals of Computer Graphics, Fourth.; 
+        CRC Press, Taylor & Francis Group: Boca Raton, FL, 2015, chapter 13.4.4.
+        
+        Constructing an orthonormal basis from a single vector: Marschner, S.; Shirley, P. Fundamentals of Computer Graphics, Fourth.; 
+        CRC Press, Taylor & Francis Group: Boca Raton, FL, 2015, chapter 2.4.6.
+    */
     const uint32_t numSamples = state.features.extra.numGlossySamples;
 
     if (numSamples <= 0) return;

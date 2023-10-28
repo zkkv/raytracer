@@ -195,6 +195,17 @@ void applyFilter1dToPixel(const size_t xOriginal,
 // not go on a hunting expedition for your implementation, so please keep it here!
 void postprocessImageWithBloom(const Scene& scene, const Features& features, const Trackball& camera, Screen& image)
 {
+    /*
+        SOURCES:
+        Perceived luminance: https://stackoverflow.com/a/596243/15236567
+        
+        Multiplicative formula for binomial coefficients: https://stackoverflow.com/a/15302394/15236567
+        
+        Convolution filters: Marschner, S.; Shirley, P. Fundamentals of Computer Graphics, Fourth.; 
+        CRC Press, Taylor & Francis Group: Boca Raton, FL, 2015, p. 190
+        
+        Binomial filters: http://www.cse.yorku.ca/~kosta/CompVis_Notes/binomial_filters.pdf.old
+    */
 
     if (!features.extra.enableBloomEffect) 
     {

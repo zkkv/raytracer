@@ -113,4 +113,11 @@ public: // Public getters
     // Return how many levels/leaves there are in the tree
     uint32_t numLevels() const override { return m_numLevels; }
     uint32_t numLeaves() const override { return m_numLeaves; }
+
+    // For SAH+Binning 
+    struct Bin
+    {
+        std::vector<Primitive> binPrimitives;
+        uint32_t start;
+    };
 };

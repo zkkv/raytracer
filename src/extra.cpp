@@ -168,6 +168,33 @@ glm::vec3 sampleEnvironmentMap(RenderState& state, Ray ray)
     }
 }
 
+size_t determineBucketIndex(const size_t i, const size_t nBins, uint32_t axis, std::span<BVH::Primitive> primitives)
+{
+    const glm::vec3 subintervalLen = computePrimitiveCentroid(primitives[i]) - computePrimitiveCentroid(primitives[0]);
+    const glm::vec3 intervalLen = computePrimitiveCentroid(primitives[primitives.size() - 1]) - computePrimitiveCentroid(primitives[0]);
+
+    size_t idx;
+    if (axis == 0)
+    {
+        idx = nBins * (subintervalLen.x) / (intervalLen.x);
+    }
+    else if (axis == 1)
+    {
+        idx = nBins*(subintervalLen.y) / (intervalLen.y);
+    } 
+    else 
+    {
+        idx = nBins*(subintervalLen.z) / (intervalLen.z);
+    }
+
+    // Clamp the index to not get out of bounds
+    if (idx == nBins) 
+    {
+        idx--;
+    }
+    return idx;
+}
+
 float calculateAABBSurfaceArea(const AxisAlignedBox& aabb)
 {
     const glm::vec3 axes = glm::abs(aabb.upper - aabb.lower);
@@ -207,7 +234,7 @@ size_t splitPrimitivesBySAHBin(const AxisAlignedBox& aabb, uint32_t axis, std::s
     using Primitive = BVH::Primitive;
 
     const size_t N = primitives.size();
-    size_t nBins = 3;
+    size_t nBins = 6;
 
     // Not sure what to do in this case
     if (N < nBins)
@@ -219,70 +246,118 @@ size_t splitPrimitivesBySAHBin(const AxisAlignedBox& aabb, uint32_t axis, std::s
     // Sort
     splitPrimitivesByMedian(aabb, axis, primitives);
 
-    // The last bin can be bigger because primitives.size() might be not divisible by nBins.
-    const size_t binSize = N / nBins;
-    const size_t lastBinSize = binSize + N % nBins;
+    std::vector<BVH::Bin> bins;
+    bins.resize(nBins);
 
-    // We actually don't care about this since this is constant.
-    //const float outerSurfaceArea = calculateAABBSurfaceArea(aabb);
+    // Assign each primitive to a bin
+    for (size_t i = 0; i < N; i++)
+    {
+        const size_t bIndex = determineBucketIndex(i, nBins, axis, primitives);
+        bins[bIndex].binPrimitives.push_back(primitives[i]);
+    }
+
+    // Determine where each bin starts
+    size_t relStart = 0;
+    for (size_t i = 0; i < nBins; i++)
+    {
+        bins[i].start = relStart;
+        relStart += bins[i].binPrimitives.size();
+    }
+
+    // Calculate AABB around each bin
+    //for (size_t i = 0; i < nBins; i++)
+    //{
+    //    bins[i].aabb = computeSpanAABB(bins[i].binPrimitives);
+    //}
+
+    // The last bin can be bigger because primitives.size() might be not divisible by nBins.
+    //const size_t binSize = N / nBins;
+    //const size_t lastBinSize = binSize + N % nBins;
+
+    const float outerSurfaceArea = calculateAABBSurfaceArea(aabb);
 
     float minCost = std::numeric_limits<float>::max();
-    size_t minIndex = 1;
-    const float baseCost = N * calculateAABBSurfaceArea(aabb);
+    size_t minIndex = -1;
+    //const float baseCost = N * calculateAABBSurfaceArea(aabb);
+    
+    // Intersection cost is assumed to be 1 for all calculations below
+    const float baseCost = N;
 
-    for (size_t i = 1; i < nBins; i++)
+    // Traversal cost can be tuned to get the best results
+    const float travCost = 0.125f;
+    
+    // Finding min cost by considering splits after each bucket
+    for (size_t i = 0; i < nBins - 1; i++) 
     {
-        const size_t iSplit = i * binSize;
-        const size_t leftSize = iSplit;
-        const size_t rightSize = N - leftSize;
+        // Left subdivision
+        const size_t leftSize = bins[i + 1].start;
         const float leftSurfaceArea = calculateAABBSurfaceArea(computeSpanAABB(primitives.subspan(0, leftSize)));
-        const float rightSurfaceArea = calculateAABBSurfaceArea(computeSpanAABB(primitives.subspan(iSplit, rightSize)));
-        const float cost = leftSurfaceArea * leftSize + rightSurfaceArea * rightSize;
-        if (cost < minCost)
+
+        // Right subdivision
+        const size_t rightSize = N - leftSize;
+        const float rightSurfaceArea = calculateAABBSurfaceArea(computeSpanAABB(primitives.subspan(leftSize, rightSize)));
+
+        const float cost = travCost + (leftSurfaceArea * leftSize + rightSurfaceArea * rightSize) / outerSurfaceArea;
+        if (cost < minCost) 
         {
             minCost = cost;
-            minIndex = i;
+            minIndex = leftSize;
         }
-
-        /* DEBUG START */
-        {
-            std::cout << "L = " << leftSize << ", R = " << rightSize << "\n";
-            std::cout << "LA = " << leftSurfaceArea << ", RA = " << rightSurfaceArea << " " << cost << "\n\n" << std::flush;
-        }
-        /* DEBUG END */
-
-        /* DEBUG START */
-        /*{
-            std::cout << "i = " << i << ", iSplit = " << iSplit << ", leftSize = " << leftSize << ", rightSize = " << rightSize;
-            std::cout << "\nLEFT:\n";
-
-            const auto leftSpan = p.subspan(0, leftSize);
-            const auto rightSpan = p.subspan(iSplit, rightSize);
-
-            for (const auto& elem : leftSpan) {
-                std::cout << elem << " ";
-            }
-            std::cout << "\nRIGHT:\n";
-            for (const auto& elem : rightSpan) {
-                std::cout << elem << " ";
-            }
-            std::cout << "\n\n";
-        }*/
-        /* DEBUG END */
     }
+
+    //for (size_t i = 1; i < nBins; i++)
+    //{
+    //    const size_t iSplit = i * binSize;
+    //    const size_t leftSize = iSplit;
+    //    const size_t rightSize = N - leftSize;
+    //    const float leftSurfaceArea = calculateAABBSurfaceArea(computeSpanAABB(primitives.subspan(0, leftSize)));
+    //    const float rightSurfaceArea = calculateAABBSurfaceArea(computeSpanAABB(primitives.subspan(iSplit, rightSize)));
+    //    const float cost = leftSurfaceArea * leftSize + rightSurfaceArea * rightSize;
+    //    if (cost < minCost)
+    //    {
+    //        minCost = cost;
+    //        minIndex = i;
+    //    }
+
+    //    /* DEBUG START */
+    //    //{
+    //    //    std::cout << "L = " << leftSize << ", R = " << rightSize << "\n";
+    //    //    std::cout << "LA = " << leftSurfaceArea << ", RA = " << rightSurfaceArea << " " << cost << "\n\n" << std::flush;
+    //    //}
+    //    /* DEBUG END */
+
+    //    /* DEBUG START */
+    //    /*{
+    //        std::cout << "i = " << i << ", iSplit = " << iSplit << ", leftSize = " << leftSize << ", rightSize = " << rightSize;
+    //        std::cout << "\nLEFT:\n";
+
+    //        const auto leftSpan = p.subspan(0, leftSize);
+    //        const auto rightSpan = p.subspan(iSplit, rightSize);
+
+    //        for (const auto& elem : leftSpan) {
+    //            std::cout << elem << " ";
+    //        }
+    //        std::cout << "\nRIGHT:\n";
+    //        for (const auto& elem : rightSpan) {
+    //            std::cout << elem << " ";
+    //        }
+    //        std::cout << "\n\n";
+    //    }*/
+    //    /* DEBUG END */
+    //}
 
     /* DEBUG START */
-    {
-        std::cout << "BASE = " << baseCost << ", MIN = " << minCost << "\n";
-    }
+    //{
+    //    std::cout << "BASE = " << baseCost << ", MIN = " << minCost << "\n";
+    //}
     /* DEBUG END */
 
     if (minCost >= baseCost)
     {
-        return 0;
+        return -1;
     }
 
-    return minIndex * binSize;
+    return minIndex;
 
     //return 0; // This is clearly not the solution
 }

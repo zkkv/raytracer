@@ -467,9 +467,9 @@ void BVH::buildRecursive(const Scene& scene, const Features& features, std::span
         {
             splitIndex = splitPrimitivesBySAHBin(aabb, computeAABBLongestAxis(aabb), primitives);
 
-            std::cout << "Node: " << nodeIndex << " Split: " << splitIndex << std::endl;
+            //std::cout << "Node: " << nodeIndex << " Split: " << splitIndex << std::endl;
 
-            if (splitIndex == 0)
+            if (splitIndex == -1)
             {
                 // Leaf
                 m_nodes[nodeIndex] = buildLeafData(scene, features, aabb, primitives);

@@ -265,8 +265,7 @@ int main(int argc, char** argv)
                     ImGui::SliderInt("BVH Leaf", &bvhDebugLeaf, 1, bvh.numLeaves());
                 ImGui::Checkbox("Draw SAH Bins", &config.features.extra.enableSahBinningDebug);
                 if (config.features.extra.enableSahBinningDebug)
-                    ImGui::SliderInt("SAH Node Index", &config.features.extra.debugSAHNodeIndex, 0, 30);
-                    ImGui::SliderInt("SAH Split Index", &config.features.extra.debugSAHSplitIndex, 0, 30);
+                    ImGui::SliderInt("SAH Node Index", &config.features.extra.debugSAHNodeIndex, 2, bvh.nodes().size());
             }
 
             ImGui::Spacing();
@@ -420,7 +419,7 @@ int main(int argc, char** argv)
                     if (debugBVHLeaf)
                         bvh.debugDrawLeaf(bvhDebugLeaf);
                     if (config.features.extra.enableSahBinningDebug)
-                        bvh.debugSAHBins(config.features.extra.debugSAHNodeIndex, config.features.extra.debugSAHSplitIndex);
+                        bvh.debugSAHBins(config.features.extra.debugSAHNodeIndex);
                     enableDebugDraw = false;
                     glPopAttrib();
                 }

@@ -453,14 +453,21 @@ void BVH::buildRecursive(const Scene& scene, const Features& features, std::span
         // Leaf
         m_nodes[nodeIndex] = buildLeafData(scene, features, aabb, primitives);
         std::copy(primitives.begin(), primitives.end(), std::back_inserter(m_primitives));
+
+        if (features.extra.storeSplitData) 
+        {
+            SplitInfo splitInfo;
+            splitInfo.prims.assign(primitives.begin(), primitives.end());
+            // for (Primitive prim : primitives)
+            //{
+            //     splitInfo.prims.push_back(prim);
+            // }
+            splitInfo.splitIdx = 0;
+            nodeToSplitInfo.insert(std::pair(nodeIndex, splitInfo));
+        }
     }
     else
     {
-        // Inner node
-        const uint32_t leftChild = nextNodeIdx();
-        const uint32_t rightChild = nextNodeIdx();
-        m_nodes[nodeIndex] = buildNodeData(scene, features, aabb, leftChild, rightChild);
-
         size_t splitIndex;
 
         if (features.extra.enableBvhSahBinning)
@@ -469,7 +476,19 @@ void BVH::buildRecursive(const Scene& scene, const Features& features, std::span
 
             //std::cout << "Node: " << nodeIndex << " Split: " << splitIndex << std::endl;
 
-            if (splitIndex == -1)
+            if (features.extra.storeSplitData)
+            {
+                SplitInfo splitInfo;
+                splitInfo.prims.assign(primitives.begin(), primitives.end());
+                //for (Primitive prim : primitives)
+                //{
+                //    splitInfo.prims.push_back(prim);
+                //}
+                splitInfo.splitIdx = splitIndex;
+                nodeToSplitInfo.insert(std::pair(nodeIndex, splitInfo));
+            }
+
+            if (splitIndex == -1) 
             {
                 // Leaf
                 m_nodes[nodeIndex] = buildLeafData(scene, features, aabb, primitives);
@@ -483,6 +502,10 @@ void BVH::buildRecursive(const Scene& scene, const Features& features, std::span
             //std::cout << primitives.size() << " " << splitIndex << std::endl;
         }
 
+        // Inner node
+        const uint32_t leftChild = nextNodeIdx();
+        const uint32_t rightChild = nextNodeIdx();
+        m_nodes[nodeIndex] = buildNodeData(scene, features, aabb, leftChild, rightChild);
 
         buildRecursive(scene, features, primitives.subspan(0, splitIndex), leftChild);
         buildRecursive(scene, features, primitives.subspan(splitIndex, primitives.size() - splitIndex), rightChild);
@@ -657,18 +680,53 @@ void BVH::debugDrawLeaf(int leafIndex)
 }
 
 
-void BVH::debugSAHBins(const uint32_t nodeIndex, const uint32_t splitIndex)
+void BVH::debugSAHBins(const uint32_t nodeIndex)
 {
-    const BVH::Node& node = BVH::m_nodes.at(nodeIndex);
+    if (nodeIndex < 2 || !nodeToSplitInfo.contains(nodeIndex)) return;
 
-    const size_t leftSize = splitIndex;
-    const size_t rightSize = node.primitiveCount() - leftSize;
+    SplitInfo splitInfo = nodeToSplitInfo.at(nodeIndex);
+    const BVH::Node currentNode = m_nodes[nodeIndex];
 
-    const std::span<Primitive> primitives { BVH::m_primitives };
+    if (!currentNode.isLeaf())
+    {
+        const std::span<Primitive> sp(splitInfo.prims.data(), splitInfo.prims.size());
 
-    const AxisAlignedBox leftBox = computeSpanAABB(primitives.subspan(node.primitiveOffset(), leftSize));
-    const AxisAlignedBox rightBox = computeSpanAABB(primitives.subspan(splitIndex, rightSize));
+        const AxisAlignedBox leftBox = computeSpanAABB(sp.subspan(0, splitInfo.splitIdx));
+        const AxisAlignedBox rightBox = computeSpanAABB(sp.subspan(splitInfo.splitIdx, sp.size() - splitInfo.splitIdx));
 
-    drawAABB(leftBox, DrawMode::Wireframe, glm::vec3(1.0f, 0.0f, 0.0f), 0.6f);
-    drawAABB(rightBox, DrawMode::Wireframe, glm::vec3(0.0f, 0.0f, 1.0f), 0.6f);
+        drawAABB(leftBox, DrawMode::Filled, glm::vec3(0.0f, 0.15f, 1.0f), 0.6f);
+        drawAABB(rightBox, DrawMode::Filled, glm::vec3(1.0f, 0.0f, 0.0f), 0.6f);
+
+        //// Left child
+        //drawAABB(leftBox, DrawMode::Wireframe, glm::vec3(0.0f, 0.15f, 1.0f), 0.6f);
+        //std::array<glm::vec3, 3> colorsLeft;
+        //colorsLeft[0] = glm::vec3(0.9f, 0.0f, 0.0f); // Red
+        //colorsLeft[1] = glm::vec3(0.9f, 0.3f, 0.05f); // Orange
+        //colorsLeft[2] = glm::vec3(0.8f, 0.8f, 0.05f); // Yellow
+
+        //uint32_t c = 0;
+        //uint32_t start = m_nodes[currentNode.leftChild()].primitiveOffset();
+        //uint32_t end = m_nodes[currentNode.leftChild()].primitiveOffset() + m_nodes[currentNode.leftChild()].primitiveCount();
+        //for (int i = start; i < end; i++) {
+        //    drawTriangle(m_primitives[i].v0, m_primitives[i].v1, m_primitives[i].v2, colorsLeft[c++ % 3]);
+        //}
+
+        //// Right child
+        //drawAABB(rightBox, DrawMode::Wireframe, glm::vec3(1.0f, 0.0f, 0.0f), 0.6f);
+        //std::array<glm::vec3, 3> colorsRight;
+        //colorsRight[0] = glm::vec3(0.0f, 0.0f, 0.8f); // Blue
+        //colorsRight[1] = glm::vec3(0.0f, 0.9f, 0.05f); // Green
+        //colorsRight[2] = glm::vec3(0.05f, 0.95f, 1.0f); // Cyan
+
+        //c = 0;
+        //start = m_nodes[currentNode.rightChild()].primitiveOffset();
+        //end = m_nodes[currentNode.rightChild()].primitiveOffset() + m_nodes[currentNode.rightChild()].primitiveCount();
+        //for (int i = start; i < end; i++) {
+        //    drawTriangle(m_primitives[i].v0, m_primitives[i].v1, m_primitives[i].v2, colorsRight[c++ % 3]);
+        //}
+    }
+    else
+    {
+        drawAABB(currentNode.aabb, DrawMode::Wireframe, glm::vec3(0.05f, 1.0f, 0.05f), 0.6f);
+    }
 }

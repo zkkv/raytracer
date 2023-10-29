@@ -207,7 +207,7 @@ size_t splitPrimitivesBySAHBin(const AxisAlignedBox& aabb, uint32_t axis, std::s
     using Primitive = BVH::Primitive;
 
     const size_t N = primitives.size();
-    size_t nBins = 30;
+    size_t nBins = 3;
 
     // Not sure what to do in this case
     if (N < nBins)
@@ -245,6 +245,13 @@ size_t splitPrimitivesBySAHBin(const AxisAlignedBox& aabb, uint32_t axis, std::s
         }
 
         /* DEBUG START */
+        {
+            std::cout << "L = " << leftSize << ", R = " << rightSize << "\n";
+            std::cout << "LA = " << leftSurfaceArea << ", RA = " << rightSurfaceArea << " " << cost << "\n\n" << std::flush;
+        }
+        /* DEBUG END */
+
+        /* DEBUG START */
         /*{
             std::cout << "i = " << i << ", iSplit = " << iSplit << ", leftSize = " << leftSize << ", rightSize = " << rightSize;
             std::cout << "\nLEFT:\n";
@@ -263,6 +270,12 @@ size_t splitPrimitivesBySAHBin(const AxisAlignedBox& aabb, uint32_t axis, std::s
         }*/
         /* DEBUG END */
     }
+
+    /* DEBUG START */
+    {
+        std::cout << "BASE = " << baseCost << ", MIN = " << minCost << "\n";
+    }
+    /* DEBUG END */
 
     if (minCost >= baseCost)
     {

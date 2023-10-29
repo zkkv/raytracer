@@ -54,9 +54,11 @@ void updateHitInfo(RenderState& state, const BVHInterface::Primitive& primitive,
 BVH::BVH(const Scene& scene, const Features& features)
 {
     // Remove this if and the one below to see the time in release mode
+//#ifndef NDEBUG
     // Store start of bvh build for timing
     using clock = std::chrono::high_resolution_clock;
     const auto start = clock::now();
+//#endif
 
     // Count the total nr. of triangles in the scene
     size_t numTriangles = 0;
@@ -91,9 +93,11 @@ BVH::BVH(const Scene& scene, const Features& features)
     buildNumLeaves();
 
     // Remove this if and the one above to see the time in release mode
+//#ifndef NDEBUG
     // Output end of bvh build for timing
     const auto end = clock::now();
     std::cout << "BVH construction time: " << std::chrono::duration<double, std::milli>(end - start).count() << "ms" << std::endl;
+//#endif
 }
 
 // BVH helper method; allocates a new node and returns its index
@@ -463,6 +467,8 @@ void BVH::buildRecursive(const Scene& scene, const Features& features, std::span
         {
             splitIndex = splitPrimitivesBySAHBin(aabb, computeAABBLongestAxis(aabb), primitives);
 
+            std::cout << "Node: " << nodeIndex << " Split: " << splitIndex << std::endl;
+
             if (splitIndex == 0)
             {
                 // Leaf
@@ -470,7 +476,6 @@ void BVH::buildRecursive(const Scene& scene, const Features& features, std::span
                 std::copy(primitives.begin(), primitives.end(), std::back_inserter(m_primitives));
                 return;
             }
-            //std::cout << primitives.size() << " " << splitIndex << std::endl;
         } 
         else 
         {
@@ -649,4 +654,21 @@ void BVH::debugDrawLeaf(int leafIndex)
             drawTriangle(m_primitives[i].v0, m_primitives[i].v1, m_primitives[i].v2, colors[c++ % 6]);
         }
     }
+}
+
+
+void BVH::debugSAHBins(const uint32_t nodeIndex, const uint32_t splitIndex)
+{
+    const BVH::Node& node = BVH::m_nodes.at(nodeIndex);
+
+    const size_t leftSize = splitIndex;
+    const size_t rightSize = node.primitiveCount() - leftSize;
+
+    const std::span<Primitive> primitives { BVH::m_primitives };
+
+    const AxisAlignedBox leftBox = computeSpanAABB(primitives.subspan(node.primitiveOffset(), leftSize));
+    const AxisAlignedBox rightBox = computeSpanAABB(primitives.subspan(splitIndex, rightSize));
+
+    drawAABB(leftBox, DrawMode::Wireframe, glm::vec3(1.0f, 0.0f, 0.0f), 0.6f);
+    drawAABB(rightBox, DrawMode::Wireframe, glm::vec3(0.0f, 0.0f, 1.0f), 0.6f);
 }

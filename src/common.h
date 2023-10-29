@@ -68,6 +68,10 @@ struct ExtraFeatures {
     bool enableMipmapTextureFiltering = false;
     bool enableMotionBlur = false;
 
+    bool enableSahBinningDebug = false;
+    int debugSAHNodeIndex = 0;
+    int debugSAHSplitIndex = 0;
+
     // Parameters for glossy reflection
     uint32_t numGlossySamples = 1;
 

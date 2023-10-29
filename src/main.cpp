@@ -263,6 +263,10 @@ int main(int argc, char** argv)
                 ImGui::Checkbox("Draw BVH Leaf", &debugBVHLeaf);
                 if (debugBVHLeaf)
                     ImGui::SliderInt("BVH Leaf", &bvhDebugLeaf, 1, bvh.numLeaves());
+                ImGui::Checkbox("Draw SAH Bins", &config.features.extra.enableSahBinningDebug);
+                if (config.features.extra.enableSahBinningDebug)
+                    ImGui::SliderInt("SAH Node Index", &config.features.extra.debugSAHNodeIndex, 0, 30);
+                    ImGui::SliderInt("SAH Split Index", &config.features.extra.debugSAHSplitIndex, 0, 30);
             }
 
             ImGui::Spacing();
@@ -400,7 +404,7 @@ int main(int argc, char** argv)
 
                 drawLightsOpenGL(scene, camera, selectedLightIdx);
 
-                if (debugBVHLevel || debugBVHLeaf) {
+                if (debugBVHLevel || debugBVHLeaf || config.features.extra.enableSahBinningDebug) {
                     glPushAttrib(GL_ALL_ATTRIB_BITS);
                     setOpenGLMatrices(camera);
                     glDisable(GL_LIGHTING);
@@ -415,6 +419,8 @@ int main(int argc, char** argv)
                         bvh.debugDrawLevel(bvhDebugLevel);
                     if (debugBVHLeaf)
                         bvh.debugDrawLeaf(bvhDebugLeaf);
+                    if (config.features.extra.enableSahBinningDebug)
+                        bvh.debugSAHBins(config.features.extra.debugSAHNodeIndex, config.features.extra.debugSAHSplitIndex);
                     enableDebugDraw = false;
                     glPopAttrib();
                 }

@@ -211,32 +211,18 @@ float calculateAABBSurfaceArea(const AxisAlignedBox& aabb)
 // This method is unit-tested, so do not change the function signature.
 size_t splitPrimitivesBySAHBin(const AxisAlignedBox& aabb, uint32_t axis, std::span<BVH::Primitive> primitives)
 {
-    // TODO: Test
-    // TODO: Visual debugging
-    // ASK: What should happen if nPrimitives < nBins? - Keep it like that.
-    // ASK: Do we need to compare with base cost? - Design choice, it's fine
-    // ASK: Should we now ignore LeafSize variable and only use heuristic? - No, don't ignore LeafSize
-    // ADVICE: Consider multiplying costs by different numbers, reflect that in the report
-    // ADVICE: Try 3-6 bins
-    // ADVICE: For visual debug there can be a method which accepts node index and/or bin number and shows the splitting
+    /*
+       SOURCES:
+       Surface area heuristic with binning: M. Pharr, J. Wenzel, and G. Humphreys. Physically Based Rendering, Second Edition: 
+       From Theory To Implementation. Morgan Kaufmann Publishers Inc., 2nd edition, chapter 4.4.2.
 
-    /* DEBUG START */
-    /*const size_t DEBUG_SIZE = 17;
-    int arr[DEBUG_SIZE];
-    for (int i = 0; i < DEBUG_SIZE; i++)
-    {
-        arr[i] = i;
-    }
-    std::span<int, DEBUG_SIZE> p = std::span(arr);
-    const size_t N = DEBUG_SIZE;*/
-    /* DEBUG END */
-
+       General information: TU Delft Computer Graphics course, lecture 9.
+    */
     using Primitive = BVH::Primitive;
 
     const size_t N = primitives.size();
     size_t nBins = 50;
 
-    // Not sure what to do in this case
     if (N < nBins)
     {
         nBins = N;
@@ -272,7 +258,7 @@ size_t splitPrimitivesBySAHBin(const AxisAlignedBox& aabb, uint32_t axis, std::s
     const float baseCost = N;
 
     // Traversal cost can be tuned to get the best results
-    const float travCost = 0.2f;
+    const float travCost = 1.5f;
     
     // Finding min cost by considering splits after each bucket
     for (size_t i = 0; i < nBins - 1; i++) 
@@ -292,12 +278,6 @@ size_t splitPrimitivesBySAHBin(const AxisAlignedBox& aabb, uint32_t axis, std::s
             minIndex = leftSize;
         }
     }
-
-    /* DEBUG START */
-    //{
-    //    std::cout << "BASE = " << baseCost << ", MIN = " << minCost << "\n";
-    //}
-    /* DEBUG END */
 
     if (minCost >= baseCost)
     {

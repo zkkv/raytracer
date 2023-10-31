@@ -268,7 +268,7 @@ int main(int argc, char** argv)
                 {
                     ImGui::SliderInt("SAH Node Index", &config.features.extra.debugSAHNodeIndex, 0, bvh.nodes().size());
 
-                    int maxBinNum = bvh.numberOfBinsInNode(config.features.extra.debugSAHNodeIndex);
+                    int maxBinNum = bvh.numberOfBinsInNode(config.features.extra.debugSAHNodeIndex) - 2;
                     if (maxBinNum != -1)
                     {
                         ImGui::SliderInt("SAH Bin Number", &config.features.extra.debugSAHBinNumber, 0, maxBinNum);

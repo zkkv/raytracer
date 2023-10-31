@@ -26,8 +26,8 @@ glm::vec3 sampleTextureNearest(const Image& image, const glm::vec2& texCoord)
     // The pixel are stored in a 1D array of row major order
     // you can convert from position (i,j) to an index using the method seen in the lecture
     // Note, the center of the first pixel is at image coordinates (0.5, 0.5)
-    int xCoord = glm::floor(texCoord[0] * (image.width - 1));
-    int yCoord = glm::floor(texCoord[1] * (image.height - 1));
+    int xCoord = glm::round(texCoord[0] * (image.width - 1));
+    int yCoord = glm::round(texCoord[1] * (image.height - 1));
     
     return getPixelFromCoordinates(image, xCoord, yCoord);
 }

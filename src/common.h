@@ -6,6 +6,7 @@ DISABLE_WARNINGS_PUSH()
 #include <glm/vec3.hpp>
 DISABLE_WARNINGS_POP()
 #include <framework/mesh.h>
+#include <framework/image.h>
 
 enum class DrawMode {
     Filled,
@@ -58,6 +59,18 @@ struct ParallelogramLight {
     glm::vec3 edge01, edge02; // edges from v0 to v1, and from v0 to v2
     glm::vec3 color0, color1, color2, color3;
 };
+
+//struct EnvironmentMap {
+//    //Image image = Image("sky-cubemap.jpg"); // hardcoded for now
+//    std::vector<Image> faces = {
+//        Image("data/env_map/right.jpg"), //  +X
+//        Image("data/env_map/left.jpg"), //   -X
+//        Image("data/env_map/top.jpg"), //    +Y
+//        Image("data/env_map/bottom.jpg"), // -Y
+//        Image("data/env_map/front.jpg"), //  -Z
+//        Image("data/env_map/back.jpg") //    +Z
+//    };
+//};
 
 struct ExtraFeatures {
     bool enableBvhSahBinning = false;

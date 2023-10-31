@@ -4,6 +4,7 @@
 #include "recursive.h"
 #include "shading.h"
 #include <framework/trackball.h>
+#include "texture.h"
 
 // TODO; Extra feature
 // Given the same input as for `renderImage()`, instead render an image with your own implementation
@@ -66,6 +67,19 @@ void renderRayGlossyComponent(RenderState& state, Ray ray, const HitInfo& hitInf
     // ...
 }
 
+//glm::vec3 sampleTexture(RenderState& state, std::shared_ptr<Image> texture, const glm::vec2 texCoords)
+//{
+//    if (state.features.enableTextureMapping && texture) {
+//        if (state.features.enableBilinearTextureFiltering) {
+//            return sampleTextureBilinear(*texture, texCoords);
+//        } else {
+//            return sampleTextureNearest(*texture, texCoords);
+//        }
+//    } else {
+//        return glm::vec3(0);
+//    }
+//}
+
 // TODO; Extra feature
 // Given a camera ray (or reflected camera ray) that does not intersect the scene, evaluates the contribution
 // along the ray, originating from an environment map. You will have to add support for environment textures
@@ -78,7 +92,53 @@ glm::vec3 sampleEnvironmentMap(RenderState& state, Ray ray)
 {
     if (state.features.extra.enableEnvironmentMap) {
         // Part of your implementation should go here
-        return glm::vec3(0.f);
+        //std::vector<Image> faces = state.scene.environmentMap.faces;
+
+        float maxComponent = std::max(ray.direction.x, std::max(ray.direction.y, ray.direction.z));
+        glm::vec3 r = ray.direction / maxComponent; // [-1, 1]
+        glm::vec3 coords = (r + glm::vec3(1.0f)) / 2.0f; // [0, 1]
+
+        // +- 1 => choose face
+        // take other 2 coords and sample from face
+        float one = 1.0f - FLT_EPSILON;
+        float l = state.scene.environmentMap.width / 4.0f; // side length of face
+        float u, v;
+
+        u = 0.5f / 4.0f;
+        v = 1.0f / 3.0f + 0.2f;
+        
+        // texture is 4 squares wide and 3 squares high
+        // TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO 
+        // Idea: DALL-E texture (if there's time)
+        if (r.x > one) { // right
+            u = coords.y / 4.0f;
+            v = 1.0f / 3.0f + coords.z;
+        } 
+        //else if (r.x < -one) // left
+        //    return sampleTexture(state, std::make_shared<Image>(faces[1]), glm::vec2(coords.y, coords.z));
+        //else if (r.y > one) // top 
+        //    return sampleTexture(state, std::make_shared<Image>(faces[2]), glm::vec2(coords.x, coords.z));
+        //else if (r.y < -one) // bottom
+        //    return sampleTexture(state, std::make_shared<Image>(faces[3]), glm::vec2(coords.x, coords.z));
+        //else if (r.z < -one) // front
+        //    return sampleTexture(state, std::make_shared<Image>(faces[4]), glm::vec2(coords.x, coords.y));
+        //else if (r.z > one) // back
+        //    return sampleTexture(state, std::make_shared<Image>(faces[5]), glm::vec2(coords.x, coords.y));
+        
+        glm::vec2 mapTexCoords = glm::vec2(u, v);
+
+        // TODO pull textures
+
+        return sampleTextureNearest(state.scene.environmentMap, mapTexCoords);
+
+        // !!! Use this instead:
+      
+        if (state.features.enableBilinearTextureFiltering) {
+            return sampleTextureBilinear(state.scene.environmentMap, mapTexCoords);
+        } else {
+            return sampleTextureNearest(state.scene.environmentMap, mapTexCoords);
+        }
+
     } else {
         return glm::vec3(0.f);
     }

@@ -36,6 +36,8 @@ struct Scene {
 
     // You can add your own objects (e.g. environment maps) here
     // ...
+    //EnvironmentMap environmentMap;
+    Image environmentMap = Image(DATA_DIR / std::filesystem::path("sky-cubemap.png"));
 };
 
 // Load a prebuilt scene.

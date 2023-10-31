@@ -60,18 +60,6 @@ struct ParallelogramLight {
     glm::vec3 color0, color1, color2, color3;
 };
 
-//struct EnvironmentMap {
-//    //Image image = Image("sky-cubemap.jpg"); // hardcoded for now
-//    std::vector<Image> faces = {
-//        Image("data/env_map/right.jpg"), //  +X
-//        Image("data/env_map/left.jpg"), //   -X
-//        Image("data/env_map/top.jpg"), //    +Y
-//        Image("data/env_map/bottom.jpg"), // -Y
-//        Image("data/env_map/front.jpg"), //  -Z
-//        Image("data/env_map/back.jpg") //    +Z
-//    };
-//};
-
 struct ExtraFeatures {
     bool enableBvhSahBinning = false;
     bool enableBloomEffect = false;

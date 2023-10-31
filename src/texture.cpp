@@ -2,10 +2,11 @@
 #include "render.h"
 #include <framework/image.h>
 
-glm::vec3 getPixelFromCoordinates(const Image& image, const int xCoord, const int yCoord) 
+glm::vec3 getPixelFromCoordinates(const Image& image, int xCoord, int yCoord) 
 {
-    // Extracts the pixel at (xCoord, yCoord) from the 1D array of the image
-
+    // Extracts the pixel at (xCoord, yCoord) from the 1D array of the image, clamping the coordinates to [0, size-1]
+    xCoord = glm::clamp(xCoord, 0, image.width - 1);
+    yCoord = glm::clamp(yCoord, 0, image.height - 1);
     return image.pixels[(image.height - yCoord - 1) * image.width + xCoord];
 }
 
@@ -27,11 +28,7 @@ glm::vec3 sampleTextureNearest(const Image& image, const glm::vec2& texCoord)
     // you can convert from position (i,j) to an index using the method seen in the lecture
     // Note, the center of the first pixel is at image coordinates (0.5, 0.5)
     int xCoord = glm::floor(texCoord[0] * image.width);
-    if (xCoord >= image.width)
-        xCoord = image.width - 1;
     int yCoord = glm::floor(texCoord[1] * image.height);
-    if (yCoord >= image.height)
-        yCoord = image.height - 1;
     
     return getPixelFromCoordinates(image, xCoord, yCoord);
 }

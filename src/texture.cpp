@@ -59,27 +59,31 @@ glm::vec3 sampleTextureBilinear(const Image& image, const glm::vec2& texCoord)
     int xCoordTL, yCoordTL, xCoordBL, yCoordBL, xCoordTR, yCoordTR, xCoordBR, yCoordBR;
 
     xCoordTL = glm::floor(texCoord[0] * image.width);
-    if (texCoord[0] - (int)texCoord[0] < 0.5f)
+    if (xCoordTL >= image.width)
+        xCoordTL = image.width - 1;
+    else if (texCoord[0] * image.width - xCoordTL < 0.5f)
         --xCoordTL;
     if (xCoordTL < 0)
         xCoordTL = 0;
-    if (xCoordTL >= image.width)
-        xCoordTL = image.width - 1;
     xCoordBL = xCoordTL;
+
     xCoordTR = xCoordTL + 1;
     if (xCoordTR >= image.width)
         xCoordTR = xCoordTL;
+    if (xCoordTR < 0)
+        xCoordTR = 0;
     xCoordBR = xCoordTR;
 
 
     yCoordTL = glm::floor(texCoord[1] * image.height);
-    if (texCoord[1] - (int)texCoord[1] < 0.5f)
+    if (yCoordTL >= image.height)
+        yCoordTL = image.height - 1;
+    else if (texCoord[1] * image.height - yCoordTL < 0.5f)
         --yCoordTL;
     if (yCoordTL < 0)
         yCoordTL = 0;
-    if (yCoordTL >= image.height)
-        yCoordTL = image.height - 1;
     yCoordTR = yCoordTL;
+
     yCoordBL = yCoordTL + 1;
     if (yCoordBL >= image.height)
         yCoordBL = image.height - 1;
@@ -124,14 +128,14 @@ glm::vec3 sampleTextureBilinear(const Image& image, const glm::vec2& texCoord)
     if (yCoord >= image.height)
         yCoord = image.height - 1;
     
-    float alpha = xCoord - xCoordBL + 0.5f;
-    float beta = yCoord - yCoordBL + 0.5f;
+    float alpha = xCoord - xCoordTL - 0.5f;
+    float beta = yCoord - yCoordTL - 0.5f;
 
     // Compute areas
-    float coefTL = (1.f - alpha) * beta;
-    float coefTR = alpha * beta;
-    float coefBL = (1.f - alpha) * (1.f - beta);
-    float coefBR = alpha * (1.f - beta);
+    float coefTL = (1.f - alpha) * (1.f - beta);
+    float coefTR = alpha * (1.f - beta);
+    float coefBL = (1.f - alpha) * beta;
+    float coefBR = alpha * beta;
 
     // Compute color contributed by each corner pixel
     glm::vec3 result = coefTL * getPixelFromCoordinates(image, xCoordTL, yCoordTL);

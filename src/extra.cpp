@@ -234,13 +234,12 @@ size_t splitPrimitivesBySAHBin(const AxisAlignedBox& aabb, uint32_t axis, std::s
     using Primitive = BVH::Primitive;
 
     const size_t N = primitives.size();
-    size_t nBins = 6;
+    size_t nBins = 50;
 
     // Not sure what to do in this case
     if (N < nBins)
     {
         nBins = N;
-        //return splitPrimitivesByMedian(aabb, axis, primitives);
     }
 
     // Sort
@@ -264,27 +263,16 @@ size_t splitPrimitivesBySAHBin(const AxisAlignedBox& aabb, uint32_t axis, std::s
         relStart += bins[i].binPrimitives.size();
     }
 
-    // Calculate AABB around each bin
-    //for (size_t i = 0; i < nBins; i++)
-    //{
-    //    bins[i].aabb = computeSpanAABB(bins[i].binPrimitives);
-    //}
-
-    // The last bin can be bigger because primitives.size() might be not divisible by nBins.
-    //const size_t binSize = N / nBins;
-    //const size_t lastBinSize = binSize + N % nBins;
-
     const float outerSurfaceArea = calculateAABBSurfaceArea(aabb);
 
     float minCost = std::numeric_limits<float>::max();
     size_t minIndex = -1;
-    //const float baseCost = N * calculateAABBSurfaceArea(aabb);
     
     // Intersection cost is assumed to be 1 for all calculations below
     const float baseCost = N;
 
     // Traversal cost can be tuned to get the best results
-    const float travCost = 0.125f;
+    const float travCost = 0.2f;
     
     // Finding min cost by considering splits after each bucket
     for (size_t i = 0; i < nBins - 1; i++) 
@@ -305,47 +293,6 @@ size_t splitPrimitivesBySAHBin(const AxisAlignedBox& aabb, uint32_t axis, std::s
         }
     }
 
-    //for (size_t i = 1; i < nBins; i++)
-    //{
-    //    const size_t iSplit = i * binSize;
-    //    const size_t leftSize = iSplit;
-    //    const size_t rightSize = N - leftSize;
-    //    const float leftSurfaceArea = calculateAABBSurfaceArea(computeSpanAABB(primitives.subspan(0, leftSize)));
-    //    const float rightSurfaceArea = calculateAABBSurfaceArea(computeSpanAABB(primitives.subspan(iSplit, rightSize)));
-    //    const float cost = leftSurfaceArea * leftSize + rightSurfaceArea * rightSize;
-    //    if (cost < minCost)
-    //    {
-    //        minCost = cost;
-    //        minIndex = i;
-    //    }
-
-    //    /* DEBUG START */
-    //    //{
-    //    //    std::cout << "L = " << leftSize << ", R = " << rightSize << "\n";
-    //    //    std::cout << "LA = " << leftSurfaceArea << ", RA = " << rightSurfaceArea << " " << cost << "\n\n" << std::flush;
-    //    //}
-    //    /* DEBUG END */
-
-    //    /* DEBUG START */
-    //    /*{
-    //        std::cout << "i = " << i << ", iSplit = " << iSplit << ", leftSize = " << leftSize << ", rightSize = " << rightSize;
-    //        std::cout << "\nLEFT:\n";
-
-    //        const auto leftSpan = p.subspan(0, leftSize);
-    //        const auto rightSpan = p.subspan(iSplit, rightSize);
-
-    //        for (const auto& elem : leftSpan) {
-    //            std::cout << elem << " ";
-    //        }
-    //        std::cout << "\nRIGHT:\n";
-    //        for (const auto& elem : rightSpan) {
-    //            std::cout << elem << " ";
-    //        }
-    //        std::cout << "\n\n";
-    //    }*/
-    //    /* DEBUG END */
-    //}
-
     /* DEBUG START */
     //{
     //    std::cout << "BASE = " << baseCost << ", MIN = " << minCost << "\n";
@@ -358,6 +305,4 @@ size_t splitPrimitivesBySAHBin(const AxisAlignedBox& aabb, uint32_t axis, std::s
     }
 
     return minIndex;
-
-    //return 0; // This is clearly not the solution
 }

@@ -102,7 +102,10 @@ public: // Visual debug
     // You are free to modify this function's signature.
     void debugDrawLeaf(int leafIndex);
 
-    void debugSAHBins(const uint32_t nodeIndex);
+    int numberOfBinsInNode(const uint32_t nodeIndex);
+
+    void debugSAHBins(const Features& features, const uint32_t nodeIndex);
+
 
 public: // Public getters
     // Accessors to underlying data
@@ -127,6 +130,8 @@ public: // Public getters
     {
         std::vector<Primitive> prims;
         uint32_t splitIdx;
+        uint32_t axis;
+        AxisAlignedBox aabb;
     };
 
     // For SAH+Binning debug

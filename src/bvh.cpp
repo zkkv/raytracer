@@ -458,10 +458,6 @@ void BVH::buildRecursive(const Scene& scene, const Features& features, std::span
         {
             SplitInfo splitInfo;
             splitInfo.prims.assign(primitives.begin(), primitives.end());
-            // for (Primitive prim : primitives)
-            //{
-            //     splitInfo.prims.push_back(prim);
-            // }
             splitInfo.splitIdx = 0;
             nodeToSplitInfo.insert(std::pair(nodeIndex, splitInfo));
         }
@@ -476,15 +472,14 @@ void BVH::buildRecursive(const Scene& scene, const Features& features, std::span
 
             //std::cout << "Node: " << nodeIndex << " Split: " << splitIndex << std::endl;
 
+            // Visual debug
             if (features.extra.storeSplitData)
             {
                 SplitInfo splitInfo;
                 splitInfo.prims.assign(primitives.begin(), primitives.end());
-                //for (Primitive prim : primitives)
-                //{
-                //    splitInfo.prims.push_back(prim);
-                //}
                 splitInfo.splitIdx = splitIndex;
+                splitInfo.axis = computeAABBLongestAxis(aabb);
+                splitInfo.aabb = aabb;
                 nodeToSplitInfo.insert(std::pair(nodeIndex, splitInfo));
             }
 
@@ -679,25 +674,89 @@ void BVH::debugDrawLeaf(int leafIndex)
     }
 }
 
+int BVH::numberOfBinsInNode(const uint32_t nodeIndex)
+{
+    if (nodeIndex < 2 || !nodeToSplitInfo.contains(nodeIndex)) return -1;
 
-void BVH::debugSAHBins(const uint32_t nodeIndex)
+    SplitInfo& splitInfo = nodeToSplitInfo.at(nodeIndex);
+    const BVHInterface::Node& currentNode = m_nodes[nodeIndex];
+    if (currentNode.isLeaf())
+    {
+        return -1;
+    }
+
+    const std::span<Primitive> sp(splitInfo.prims.data(), splitInfo.prims.size());
+
+    const size_t N = sp.size();
+    size_t nBins = 50;
+
+    // Not sure what to do in this case
+    if (N < nBins) {
+        nBins = N;
+    }
+    return nBins;
+}
+
+void BVH::debugSAHBins(const Features& features, const uint32_t nodeIndex)
 {
     if (nodeIndex < 2 || !nodeToSplitInfo.contains(nodeIndex)) return;
 
-    SplitInfo splitInfo = nodeToSplitInfo.at(nodeIndex);
-    const BVH::Node currentNode = m_nodes[nodeIndex];
+    SplitInfo& splitInfo = nodeToSplitInfo.at(nodeIndex);
+    const BVHInterface::Node& currentNode = m_nodes[nodeIndex];
 
     if (!currentNode.isLeaf())
     {
         const std::span<Primitive> sp(splitInfo.prims.data(), splitInfo.prims.size());
 
-        const AxisAlignedBox leftBox = computeSpanAABB(sp.subspan(0, splitInfo.splitIdx));
-        const AxisAlignedBox rightBox = computeSpanAABB(sp.subspan(splitInfo.splitIdx, sp.size() - splitInfo.splitIdx));
+        //const AxisAlignedBox leftBox = computeSpanAABB(sp.subspan(0, splitInfo.splitIdx));
+        //const AxisAlignedBox rightBox = computeSpanAABB(sp.subspan(splitInfo.splitIdx, sp.size() - splitInfo.splitIdx));
 
-        drawAABB(leftBox, DrawMode::Filled, glm::vec3(0.0f, 0.15f, 1.0f), 0.6f);
-        drawAABB(rightBox, DrawMode::Filled, glm::vec3(1.0f, 0.0f, 0.0f), 0.6f);
+        //drawAABB(leftBox, DrawMode::Filled, glm::vec3(0.0f, 0.15f, 1.0f), 0.6f);
+        //drawAABB(rightBox, DrawMode::Filled, glm::vec3(1.0f, 0.0f, 0.0f), 0.6f);
 
-        //// Left child
+        //const auto& left = m_nodes[currentNode.leftChild()];
+        //const auto& right = m_nodes[currentNode.rightChild()];
+
+        //drawAABB(left.aabb, DrawMode::Filled, glm::vec3(0.0f, 0.15f, 1.0f), 0.6f);
+        //drawAABB(right.aabb, DrawMode::Filled, glm::vec3(1.0f, 0.0f, 0.0f), 0.6f);
+
+        using Primitive = BVH::Primitive;
+
+        const size_t N = sp.size();
+        size_t nBins = 50;
+
+        if (N < nBins) {
+            nBins = N;
+        }
+
+        size_t binNumber = features.extra.debugSAHBinNumber;
+
+        if (binNumber < 0 || binNumber >= nBins - 1)
+        {
+            binNumber = nBins - 2;
+        }
+
+        std::vector<BVH::Bin> bins;
+        bins.resize(nBins);
+
+        for (size_t i = 0; i < N; i++) {
+            const size_t bIndex = determineBucketIndex(i, nBins, splitInfo.axis, sp);
+            bins[bIndex].binPrimitives.push_back(sp[i]);
+        }
+
+        size_t relStart = 0;
+        for (size_t i = 0; i < nBins; i++) {
+            bins[i].start = relStart;
+            relStart += bins[i].binPrimitives.size();
+        }
+
+        const size_t leftSize = bins[binNumber + 1].start;
+        const size_t rightSize = N - leftSize;
+
+        drawAABB(computeSpanAABB(sp.subspan(0, leftSize)), DrawMode::Filled, glm::vec3(0.0f, 0.15f, 1.0f), 0.4f);
+        drawAABB(computeSpanAABB(sp.subspan(leftSize, rightSize)), DrawMode::Filled, glm::vec3(1.0f, 0.0f, 0.0f), 0.4f);
+
+        // Left child
         //drawAABB(leftBox, DrawMode::Wireframe, glm::vec3(0.0f, 0.15f, 1.0f), 0.6f);
         //std::array<glm::vec3, 3> colorsLeft;
         //colorsLeft[0] = glm::vec3(0.9f, 0.0f, 0.0f); // Red
@@ -707,12 +766,13 @@ void BVH::debugSAHBins(const uint32_t nodeIndex)
         //uint32_t c = 0;
         //uint32_t start = m_nodes[currentNode.leftChild()].primitiveOffset();
         //uint32_t end = m_nodes[currentNode.leftChild()].primitiveOffset() + m_nodes[currentNode.leftChild()].primitiveCount();
-        //for (int i = start; i < end; i++) {
+        //for (int i = start; i < end; i++) 
+        //{
         //    drawTriangle(m_primitives[i].v0, m_primitives[i].v1, m_primitives[i].v2, colorsLeft[c++ % 3]);
         //}
 
         //// Right child
-        //drawAABB(rightBox, DrawMode::Wireframe, glm::vec3(1.0f, 0.0f, 0.0f), 0.6f);
+        ////drawAABB(rightBox, DrawMode::Wireframe, glm::vec3(1.0f, 0.0f, 0.0f), 0.6f);
         //std::array<glm::vec3, 3> colorsRight;
         //colorsRight[0] = glm::vec3(0.0f, 0.0f, 0.8f); // Blue
         //colorsRight[1] = glm::vec3(0.0f, 0.9f, 0.05f); // Green
@@ -721,7 +781,8 @@ void BVH::debugSAHBins(const uint32_t nodeIndex)
         //c = 0;
         //start = m_nodes[currentNode.rightChild()].primitiveOffset();
         //end = m_nodes[currentNode.rightChild()].primitiveOffset() + m_nodes[currentNode.rightChild()].primitiveCount();
-        //for (int i = start; i < end; i++) {
+        //for (int i = start; i < end; i++) 
+        //{
         //    drawTriangle(m_primitives[i].v0, m_primitives[i].v1, m_primitives[i].v2, colorsRight[c++ % 3]);
         //}
     }

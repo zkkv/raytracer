@@ -54,11 +54,11 @@ void updateHitInfo(RenderState& state, const BVHInterface::Primitive& primitive,
 BVH::BVH(const Scene& scene, const Features& features)
 {
     // Remove this if and the one below to see the time in release mode
-//#ifndef NDEBUG
+#ifndef NDEBUG
     // Store start of bvh build for timing
     using clock = std::chrono::high_resolution_clock;
     const auto start = clock::now();
-//#endif
+#endif
 
     // Count the total nr. of triangles in the scene
     size_t numTriangles = 0;
@@ -93,11 +93,11 @@ BVH::BVH(const Scene& scene, const Features& features)
     buildNumLeaves();
 
     // Remove this if and the one above to see the time in release mode
-//#ifndef NDEBUG
+#ifndef NDEBUG
     // Output end of bvh build for timing
     const auto end = clock::now();
     std::cout << "BVH construction time: " << std::chrono::duration<double, std::milli>(end - start).count() << "ms" << std::endl;
-//#endif
+#endif
 }
 
 // BVH helper method; allocates a new node and returns its index

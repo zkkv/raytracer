@@ -67,19 +67,6 @@ void renderRayGlossyComponent(RenderState& state, Ray ray, const HitInfo& hitInf
     // ...
 }
 
-//glm::vec3 sampleTexture(RenderState& state, std::shared_ptr<Image> texture, const glm::vec2 texCoords)
-//{
-//    if (state.features.enableTextureMapping && texture) {
-//        if (state.features.enableBilinearTextureFiltering) {
-//            return sampleTextureBilinear(*texture, texCoords);
-//        } else {
-//            return sampleTextureNearest(*texture, texCoords);
-//        }
-//    } else {
-//        return glm::vec3(0);
-//    }
-//}
-
 // TODO; Extra feature
 // Given a camera ray (or reflected camera ray) that does not intersect the scene, evaluates the contribution
 // along the ray, originating from an environment map. You will have to add support for environment textures
@@ -127,7 +114,7 @@ glm::vec3 sampleEnvironmentMap(RenderState& state, Ray ray)
         
         glm::vec2 mapTexCoords = glm::vec2(u, 1.0f-v); // change to (u, v), currently textures are flipped
 
-        if (state.features.enableBilinearTextureFiltering)
+        if (state.features.enableBilinearTextureFiltering) 
             return sampleTextureBilinear(state.scene.environmentMap, mapTexCoords);
 
         return sampleTextureNearest(state.scene.environmentMap, mapTexCoords);

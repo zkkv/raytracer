@@ -266,7 +266,7 @@ int main(int argc, char** argv)
                 ImGui::Checkbox("Draw SAH Bins", &config.features.extra.enableSahBinningDebug);
                 if (config.features.extra.enableSahBinningDebug)
                 {
-                    ImGui::SliderInt("SAH Node Index", &config.features.extra.debugSAHNodeIndex, 2, bvh.nodes().size());
+                    ImGui::SliderInt("SAH Node Index", &config.features.extra.debugSAHNodeIndex, 0, bvh.nodes().size());
 
                     int maxBinNum = bvh.numberOfBinsInNode(config.features.extra.debugSAHNodeIndex);
                     if (maxBinNum != -1)

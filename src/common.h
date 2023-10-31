@@ -70,7 +70,7 @@ struct ExtraFeatures {
 
     bool enableSahBinningDebug = false;
     bool storeSplitData = true;
-    int debugSAHNodeIndex = 2;
+    int debugSAHNodeIndex = 0;
     int debugSAHBinNumber = 0;
 
     // Parameters for glossy reflection

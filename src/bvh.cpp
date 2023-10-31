@@ -676,7 +676,7 @@ void BVH::debugDrawLeaf(int leafIndex)
 
 int BVH::numberOfBinsInNode(const uint32_t nodeIndex)
 {
-    if (nodeIndex < 2 || !nodeToSplitInfo.contains(nodeIndex)) return -1;
+    if (nodeIndex == 1 || !nodeToSplitInfo.contains(nodeIndex)) return -1;
 
     SplitInfo& splitInfo = nodeToSplitInfo.at(nodeIndex);
     const BVHInterface::Node& currentNode = m_nodes[nodeIndex];
@@ -690,7 +690,6 @@ int BVH::numberOfBinsInNode(const uint32_t nodeIndex)
     const size_t N = sp.size();
     size_t nBins = 50;
 
-    // Not sure what to do in this case
     if (N < nBins) {
         nBins = N;
     }
@@ -699,7 +698,7 @@ int BVH::numberOfBinsInNode(const uint32_t nodeIndex)
 
 void BVH::debugSAHBins(const Features& features, const uint32_t nodeIndex)
 {
-    if (nodeIndex < 2 || !nodeToSplitInfo.contains(nodeIndex)) return;
+    if (nodeIndex == 1 || !nodeToSplitInfo.contains(nodeIndex)) return;
 
     SplitInfo& splitInfo = nodeToSplitInfo.at(nodeIndex);
     const BVHInterface::Node& currentNode = m_nodes[nodeIndex];
@@ -707,18 +706,6 @@ void BVH::debugSAHBins(const Features& features, const uint32_t nodeIndex)
     if (!currentNode.isLeaf())
     {
         const std::span<Primitive> sp(splitInfo.prims.data(), splitInfo.prims.size());
-
-        //const AxisAlignedBox leftBox = computeSpanAABB(sp.subspan(0, splitInfo.splitIdx));
-        //const AxisAlignedBox rightBox = computeSpanAABB(sp.subspan(splitInfo.splitIdx, sp.size() - splitInfo.splitIdx));
-
-        //drawAABB(leftBox, DrawMode::Filled, glm::vec3(0.0f, 0.15f, 1.0f), 0.6f);
-        //drawAABB(rightBox, DrawMode::Filled, glm::vec3(1.0f, 0.0f, 0.0f), 0.6f);
-
-        //const auto& left = m_nodes[currentNode.leftChild()];
-        //const auto& right = m_nodes[currentNode.rightChild()];
-
-        //drawAABB(left.aabb, DrawMode::Filled, glm::vec3(0.0f, 0.15f, 1.0f), 0.6f);
-        //drawAABB(right.aabb, DrawMode::Filled, glm::vec3(1.0f, 0.0f, 0.0f), 0.6f);
 
         using Primitive = BVH::Primitive;
 
@@ -739,13 +726,15 @@ void BVH::debugSAHBins(const Features& features, const uint32_t nodeIndex)
         std::vector<BVH::Bin> bins;
         bins.resize(nBins);
 
-        for (size_t i = 0; i < N; i++) {
+        for (size_t i = 0; i < N; i++) 
+        {
             const size_t bIndex = determineBucketIndex(i, nBins, splitInfo.axis, sp);
             bins[bIndex].binPrimitives.push_back(sp[i]);
         }
 
         size_t relStart = 0;
-        for (size_t i = 0; i < nBins; i++) {
+        for (size_t i = 0; i < nBins; i++) 
+        {
             bins[i].start = relStart;
             relStart += bins[i].binPrimitives.size();
         }
@@ -753,38 +742,17 @@ void BVH::debugSAHBins(const Features& features, const uint32_t nodeIndex)
         const size_t leftSize = bins[binNumber + 1].start;
         const size_t rightSize = N - leftSize;
 
-        drawAABB(computeSpanAABB(sp.subspan(0, leftSize)), DrawMode::Filled, glm::vec3(0.0f, 0.15f, 1.0f), 0.4f);
-        drawAABB(computeSpanAABB(sp.subspan(leftSize, rightSize)), DrawMode::Filled, glm::vec3(1.0f, 0.0f, 0.0f), 0.4f);
+        if (splitInfo.splitIdx == leftSize)
+        {
+            drawAABB(computeSpanAABB(sp.subspan(0, leftSize)), DrawMode::Filled, glm::vec3(0.0f, 0.15f, 1.0f), 0.5f);
+            drawAABB(computeSpanAABB(sp.subspan(leftSize, rightSize)), DrawMode::Filled, glm::vec3(1.0f, 0.0f, 0.0f), 0.5f);
+        } 
+        else 
+        {
+            drawAABB(computeSpanAABB(sp.subspan(0, leftSize)), DrawMode::Wireframe, glm::vec3(0.0f, 0.15f, 1.0f), 0.9f);
+            drawAABB(computeSpanAABB(sp.subspan(leftSize, rightSize)), DrawMode::Wireframe, glm::vec3(1.0f, 0.0f, 0.0f), 0.9f);
+        }
 
-        // Left child
-        //drawAABB(leftBox, DrawMode::Wireframe, glm::vec3(0.0f, 0.15f, 1.0f), 0.6f);
-        //std::array<glm::vec3, 3> colorsLeft;
-        //colorsLeft[0] = glm::vec3(0.9f, 0.0f, 0.0f); // Red
-        //colorsLeft[1] = glm::vec3(0.9f, 0.3f, 0.05f); // Orange
-        //colorsLeft[2] = glm::vec3(0.8f, 0.8f, 0.05f); // Yellow
-
-        //uint32_t c = 0;
-        //uint32_t start = m_nodes[currentNode.leftChild()].primitiveOffset();
-        //uint32_t end = m_nodes[currentNode.leftChild()].primitiveOffset() + m_nodes[currentNode.leftChild()].primitiveCount();
-        //for (int i = start; i < end; i++) 
-        //{
-        //    drawTriangle(m_primitives[i].v0, m_primitives[i].v1, m_primitives[i].v2, colorsLeft[c++ % 3]);
-        //}
-
-        //// Right child
-        ////drawAABB(rightBox, DrawMode::Wireframe, glm::vec3(1.0f, 0.0f, 0.0f), 0.6f);
-        //std::array<glm::vec3, 3> colorsRight;
-        //colorsRight[0] = glm::vec3(0.0f, 0.0f, 0.8f); // Blue
-        //colorsRight[1] = glm::vec3(0.0f, 0.9f, 0.05f); // Green
-        //colorsRight[2] = glm::vec3(0.05f, 0.95f, 1.0f); // Cyan
-
-        //c = 0;
-        //start = m_nodes[currentNode.rightChild()].primitiveOffset();
-        //end = m_nodes[currentNode.rightChild()].primitiveOffset() + m_nodes[currentNode.rightChild()].primitiveCount();
-        //for (int i = start; i < end; i++) 
-        //{
-        //    drawTriangle(m_primitives[i].v0, m_primitives[i].v1, m_primitives[i].v2, colorsRight[c++ % 3]);
-        //}
     }
     else
     {

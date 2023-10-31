@@ -5,6 +5,12 @@
 #include "shading.h"
 #include "draw.h"
 #include <framework/trackball.h>
+#include <iostream>
+
+void printVector(const glm::vec3& vector, const std::string& str = "")
+{
+    std::cout << str << "(" << vector.x << ", " << vector.y << ", " << vector.z << ")" << std::endl;
+}
 
 // TODO; Extra feature
 // Given the same input as for `renderImage()`, instead render an image with your own implementation
@@ -35,17 +41,245 @@ void renderImageWithMotionBlur(const Scene& scene, const BVHInterface& bvh, cons
 
 }
 
+float perceivedLuminance(glm::vec3 colors)
+{
+    // Coefficients for calculation of perceived luminance
+    const float c_R = 0.2126f;
+    const float c_G = 0.7152f;
+    const float c_B = 0.0722f;
+    return c_R * colors.r + c_G * colors.g + c_B * colors.b;
+}
+
+void applyThreshold(Screen& image, const float threshold)
+{
+    std::vector<glm::vec3>& img = image.pixels();
+    for (size_t i = 0; i < img.size(); i++)
+    {
+        if (perceivedLuminance(img[i]) < threshold)
+        {
+            img[i] = glm::vec3 { 0.0f };
+        }
+    }
+}
+
+void renderBloomAboveThreshold(Screen& image, const float threshold)
+{
+    // Renders the pixels which are above the threshold in red-white gradient.
+    // All other values are set to dark blue.
+    std::vector<glm::vec3>& img = image.pixels();
+    for (size_t i = 0; i < img.size(); i++) 
+    {
+        const float luminance = perceivedLuminance(img[i]);
+        if (luminance >= threshold) 
+        {
+            const float mapped = (luminance - threshold) / (1 - threshold);
+            img[i] = (1 - mapped) * glm::vec3 { 0.8f, 0.0f, 0.0f } + (mapped) * glm::vec3 { 0.85f, 0.85f, 0.85f };
+        } 
+        else 
+        {
+            img[i] = glm::vec3 { 0.0f, 0.0f, 0.2f };
+        }
+    }
+}
+
+void renderBloomBlurredMask(Screen& image, const Screen& mask, const uint32_t filterSize)
+{
+    std::vector<glm::vec3>& img = image.pixels();
+    const std::vector<glm::vec3>& msk = mask.pixels();
+
+    const uint32_t width = image.resolution().x;
+    const uint32_t height = image.resolution().y;
+
+    for (size_t x = 0; x < width; x++)
+    {
+        for (size_t y = 0; y < height; y++) 
+        {
+            const int indexPadded = mask.indexAt(x + filterSize, y + filterSize);
+            image.setPixel(x, y, msk[indexPadded]);
+        }
+    }
+}
+
+Screen padBorders(const Screen& image, const uint32_t filterSize)
+{
+    // Padding borders with black color (default color in Screen constructor)
+    const uint32_t newWidth = image.resolution().x + 2 * filterSize;
+    const uint32_t newHeight = image.resolution().y + 2 * filterSize;
+
+    Screen padded(glm::ivec2(newWidth, newHeight), false);
+
+    for (size_t x = 0; x < newWidth; x++)
+    {
+        for (size_t y = 0; y < newHeight; y++)
+        {
+            if ((x >= filterSize) && (x < newWidth - filterSize) && (y >= filterSize) && (y < newHeight - filterSize))
+            {
+                const size_t index = image.indexAt(x - filterSize, y - filterSize);
+                padded.setPixel(x, y, image.pixels()[index]);
+            }
+        }
+    }
+    return padded;
+}
+
+uint64_t binomial(const uint32_t n, const uint32_t k)
+{
+    uint32_t k_min = k > n - k ? n - k : k;
+    uint64_t coef = 1;
+
+    // Multiplicative formula
+    for (uint32_t i = 1; i <= k_min; i++) 
+    {
+        coef = (coef * (n - i + 1)) / i;
+    }
+
+    return coef; 
+}
+
+std::vector<glm::vec3> generateGaussianFilter(const uint32_t filterSize)
+{
+    const uint32_t radius = filterSize * 2 + 1;
+    std::vector<glm::vec3> filter;
+    filter.reserve(radius);
+    glm::vec3 sum { 0.0f };
+
+    for (size_t i = 0; i < radius; i++)
+    {
+        const glm::vec3 computed = glm::vec3 { float(binomial(radius - 1, i)) };
+        filter.push_back(computed);
+        sum += computed;
+    }
+
+    for (size_t i = 0; i < radius; i++) 
+    {
+        filter[i] /= sum;
+    }
+
+    return filter;
+}
+
+void applyFilter1dToPixel(const size_t xOriginal, 
+                        const size_t yOriginal,
+                        const Screen& imagePadded,
+                        Screen& imageCopy,
+                        const std::vector<glm::vec3>& filter,
+                        const uint32_t filterSize,
+                        const bool toRow)
+{
+    const size_t x = xOriginal + filterSize;
+    const size_t y = yOriginal + filterSize;
+    const std::vector<glm::vec3>& imgPadded = imagePadded.pixels();
+
+    glm::vec3 updated { 0.0f };
+    if (toRow)
+    {
+        for (size_t col = x - filterSize; col <= x + filterSize; col++) 
+        {
+            const size_t index = imagePadded.indexAt(col, y);
+            updated += imgPadded[index] * filter[col - x + filterSize];
+        }
+    }
+    else
+    {
+        for (size_t row = y - filterSize; row <= y + filterSize; row++) 
+        {
+            const size_t index = imagePadded.indexAt(x, row);
+            updated += imgPadded[index] * filter[row - y + filterSize];
+        }
+    }
+    imageCopy.setPixel(x, y, updated);
+}
+
 // TODO; Extra feature
 // Given a rendered image, compute and apply a bloom post-processing effect to increase bright areas.
 // This method is not unit-tested, but we do expect to find it **exactly here**, and we'd rather
 // not go on a hunting expedition for your implementation, so please keep it here!
 void postprocessImageWithBloom(const Scene& scene, const Features& features, const Trackball& camera, Screen& image)
 {
-    if (!features.extra.enableBloomEffect) {
+    /*
+        SOURCES:
+        Perceived luminance: https://stackoverflow.com/a/596243/15236567
+        
+        Multiplicative formula for binomial coefficients: https://stackoverflow.com/a/15302394/15236567
+        
+        Convolution filters: Marschner, S.; Shirley, P. Fundamentals of Computer Graphics, Fourth.; 
+        CRC Press, Taylor & Francis Group: Boca Raton, FL, 2015, p. 190
+        
+        Binomial filters: http://www.cse.yorku.ca/~kosta/CompVis_Notes/binomial_filters.pdf.old
+    */
+
+    if (!features.extra.enableBloomEffect) 
+    {
         return;
     }
 
-    // ...
+    const float threshold = features.extra.bloomFilterThreshold;
+
+    // Visual debug
+    if (features.extra.enableBloomShowAboveThreshold) 
+    {
+        renderBloomAboveThreshold(image, threshold);
+        return;
+    }
+
+    // This value MUST be limited by 31, otherwise integer overflow happens. I limit it to 30.
+    const uint32_t filterSize = features.extra.bloomFilterSize;
+
+    // imagePadded is used as an untouched copy in filtering
+    Screen imagePadded = padBorders(image, filterSize);
+
+    // Set all values below threshold to 0
+    applyThreshold(imagePadded, threshold);
+
+    // imageCopy is the one that changes
+    Screen imageCopy = imagePadded;
+    
+    // One-dimensional binomial (Gaussian) filter
+    std::vector<glm::vec3> filter1d = generateGaussianFilter(filterSize);
+
+    const uint32_t width = image.resolution().x;
+    const uint32_t height = image.resolution().y;
+
+    // Filter is separable, so we can first go through all rows, then all columns
+    for (size_t y = 0; y < height; y++)
+    {
+        for (size_t x = 0; x < width; x++)
+        {
+            applyFilter1dToPixel(x, y, imagePadded, imageCopy, filter1d, filterSize, true);
+        }
+    }
+
+    // Second traversal should be done on the result of the first one
+    imagePadded = imageCopy;
+
+    for (size_t x = 0; x < width; x++) 
+    {
+        for (size_t y = 0; y < height; y++) 
+        {
+            applyFilter1dToPixel(x, y, imagePadded, imageCopy, filter1d, filterSize, false);
+        }
+    }
+
+    // Visual debug
+    if (features.extra.enableBloomShowBlurredMask) 
+    {
+        renderBloomBlurredMask(image, imageCopy, filterSize);
+        return;
+    }
+
+    const float bloomFactor = features.extra.bloomFilterIntensity;
+    for (int x = 0; x < width; x++) 
+    {
+        for (int y = 0; y < height; y++) 
+        {
+            const int indexOriginal = image.indexAt(x, y);
+            const int indexPadded = imageCopy.indexAt(x + filterSize, y + filterSize);
+            const glm::vec3 combined = image.pixels()[indexOriginal] + imageCopy.pixels()[indexPadded] * bloomFactor;
+            image.setPixel(x, y, combined);
+        }
+    }
+
+    //image.writeBitmapToFile("D:/final_image.bmp");
 }
 
 std::array<glm::vec3, 3> constructOrthonormalBasis(const glm::vec3& r)

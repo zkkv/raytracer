@@ -6,7 +6,6 @@ DISABLE_WARNINGS_PUSH()
 #include <glm/vec3.hpp>
 DISABLE_WARNINGS_POP()
 #include <framework/mesh.h>
-#include <framework/image.h>
 
 enum class DrawMode {
     Filled,

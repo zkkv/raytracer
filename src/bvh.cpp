@@ -456,19 +456,59 @@ void BVH::buildRecursive(const Scene& scene, const Features& features, std::span
         // Leaf
         m_nodes[nodeIndex] = buildLeafData(scene, features, aabb, primitives);
         std::copy(primitives.begin(), primitives.end(), std::back_inserter(m_primitives));
+
+        if (features.extra.storeSplitData) 
+        {
+            SplitInfo splitInfo;
+            splitInfo.prims.assign(primitives.begin(), primitives.end());
+            splitInfo.splitIdx = 0;
+            nodeToSplitInfo.insert(std::pair(nodeIndex, splitInfo));
+        }
     }
     else
     {
+        size_t splitIndex;
+
+        if (features.extra.enableBvhSahBinning)
+        {
+            splitIndex = splitPrimitivesBySAHBin(aabb, computeAABBLongestAxis(aabb), primitives);
+
+            //std::cout << "Node: " << nodeIndex << " Split: " << splitIndex << std::endl;
+
+            // Visual debug
+            if (features.extra.storeSplitData)
+            {
+                SplitInfo splitInfo;
+                splitInfo.prims.assign(primitives.begin(), primitives.end());
+                splitInfo.splitIdx = splitIndex;
+                splitInfo.axis = computeAABBLongestAxis(aabb);
+                splitInfo.aabb = aabb;
+                nodeToSplitInfo.insert(std::pair(nodeIndex, splitInfo));
+            }
+
+            if (splitIndex == -1) 
+            {
+                // Leaf
+                m_nodes[nodeIndex] = buildLeafData(scene, features, aabb, primitives);
+                std::copy(primitives.begin(), primitives.end(), std::back_inserter(m_primitives));
+                return;
+            }
+        } 
+        else 
+        {
+            splitIndex = splitPrimitivesByMedian(aabb, computeAABBLongestAxis(aabb), primitives);
+            //std::cout << primitives.size() << " " << splitIndex << std::endl;
+        }
+
         // Inner node
         const uint32_t leftChild = nextNodeIdx();
         const uint32_t rightChild = nextNodeIdx();
         m_nodes[nodeIndex] = buildNodeData(scene, features, aabb, leftChild, rightChild);
 
-        const size_t splitIndex = splitPrimitivesByMedian(aabb, computeAABBLongestAxis(aabb), primitives);
-
         buildRecursive(scene, features, primitives.subspan(0, splitIndex), leftChild);
         buildRecursive(scene, features, primitives.subspan(splitIndex, primitives.size() - splitIndex), rightChild);
     }
+    return;
 }
 
 // TODO: Standard feature, or part of it
@@ -638,5 +678,91 @@ void BVH::debugDrawLeaf(int leafIndex)
         for (int i = leaf.primitiveOffset(); i < leaf.primitiveOffset() + leaf.primitiveCount(); i++) {
             drawTriangle(m_primitives[i].v0, m_primitives[i].v1, m_primitives[i].v2, colors[c++ % 6]);
         }
+    }
+}
+
+int BVH::numberOfBinsInNode(const uint32_t nodeIndex)
+{
+    if (nodeIndex == 1 || !nodeToSplitInfo.contains(nodeIndex)) return -1;
+
+    SplitInfo& splitInfo = nodeToSplitInfo.at(nodeIndex);
+    const BVHInterface::Node& currentNode = m_nodes[nodeIndex];
+    if (currentNode.isLeaf())
+    {
+        return -1;
+    }
+
+    const std::span<Primitive> sp(splitInfo.prims.data(), splitInfo.prims.size());
+
+    const size_t N = sp.size();
+    size_t nBins = 50;
+
+    if (N < nBins) {
+        nBins = N;
+    }
+    return nBins;
+}
+
+void BVH::debugSAHBins(const Features& features, const uint32_t nodeIndex)
+{
+    if (nodeIndex == 1 || !nodeToSplitInfo.contains(nodeIndex)) return;
+
+    SplitInfo& splitInfo = nodeToSplitInfo.at(nodeIndex);
+    const BVHInterface::Node& currentNode = m_nodes[nodeIndex];
+
+    if (!currentNode.isLeaf())
+    {
+        const std::span<Primitive> sp(splitInfo.prims.data(), splitInfo.prims.size());
+
+        using Primitive = BVH::Primitive;
+
+        const size_t N = sp.size();
+        size_t nBins = 50;
+
+        if (N < nBins) {
+            nBins = N;
+        }
+
+        size_t binNumber = features.extra.debugSAHBinNumber;
+
+        if (binNumber < 0 || binNumber >= nBins - 1)
+        {
+            binNumber = nBins - 2;
+        }
+
+        std::vector<BVH::Bin> bins;
+        bins.resize(nBins);
+
+        for (size_t i = 0; i < N; i++) 
+        {
+            const size_t bIndex = determineBucketIndex(i, nBins, splitInfo.axis, sp);
+            bins[bIndex].binPrimitives.push_back(sp[i]);
+        }
+
+        size_t relStart = 0;
+        for (size_t i = 0; i < nBins; i++) 
+        {
+            bins[i].start = relStart;
+            relStart += bins[i].binPrimitives.size();
+        }
+
+        const size_t leftSize = bins[binNumber + 1].start;
+        const size_t rightSize = N - leftSize;
+
+        if (splitInfo.splitIdx == leftSize)
+        {
+            drawAABB(computeSpanAABB(sp.subspan(0, leftSize)), DrawMode::Filled, glm::vec3(0.0f, 0.15f, 1.0f), 0.5f);
+            drawAABB(computeSpanAABB(sp.subspan(leftSize, rightSize)), DrawMode::Filled, glm::vec3(1.0f, 0.0f, 0.0f), 0.5f);
+        } 
+        else 
+        {
+            drawAABB(computeSpanAABB(sp.subspan(0, leftSize)), DrawMode::Wireframe, glm::vec3(0.0f, 0.15f, 1.0f), 0.9f);
+            drawAABB(computeSpanAABB(sp.subspan(leftSize, rightSize)), DrawMode::Wireframe, glm::vec3(1.0f, 0.0f, 0.0f), 0.9f);
+        }
+
+    }
+    else
+    {
+        drawAABB(currentNode.aabb, DrawMode::Wireframe, glm::vec3(0.05f, 1.0f, 0.05f), 0.6f);
     }
 }

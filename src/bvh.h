@@ -2,6 +2,7 @@
 #include "bvh_interface.h"
 #include <framework/ray.h>
 #include <vector>
+#include <unordered_map>
 
 // TODO: Standard feature
 // Given a BVH triangle, compute an axis-aligned bounding box around the primitive
@@ -101,6 +102,11 @@ public: // Visual debug
     // You are free to modify this function's signature.
     void debugDrawLeaf(int leafIndex);
 
+    int numberOfBinsInNode(const uint32_t nodeIndex);
+
+    void debugSAHBins(const Features& features, const uint32_t nodeIndex);
+
+
 public: // Public getters
     // Accessors to underlying data
     std::span<const Node> nodes() const override { return m_nodes; }
@@ -111,4 +117,23 @@ public: // Public getters
     // Return how many levels/leaves there are in the tree
     uint32_t numLevels() const override { return m_numLevels; }
     uint32_t numLeaves() const override { return m_numLeaves; }
+
+    // For SAH+Binning 
+    struct Bin
+    {
+        std::vector<Primitive> binPrimitives;
+        uint32_t start;
+    };
+
+    // For SAH+Binning debug
+    struct SplitInfo
+    {
+        std::vector<Primitive> prims;
+        uint32_t splitIdx;
+        uint32_t axis;
+        AxisAlignedBox aabb;
+    };
+
+    // For SAH+Binning debug
+    std::unordered_map<uint32_t, SplitInfo> nodeToSplitInfo;
 };

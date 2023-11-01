@@ -7,10 +7,6 @@
 #include <framework/trackball.h>
 #include <iostream>
 
-void printVector(const glm::vec3& vector, const std::string& str = "")
-{
-    std::cout << str << "(" << vector.x << ", " << vector.y << ", " << vector.z << ")" << std::endl;
-}
 
 // TODO; Extra feature
 // Given the same input as for `renderImage()`, instead render an image with your own implementation
@@ -401,6 +397,38 @@ glm::vec3 sampleEnvironmentMap(RenderState& state, Ray ray)
     }
 }
 
+size_t determineBucketIndex(const size_t i, const size_t nBins, uint32_t axis, std::span<BVH::Primitive> primitives)
+{
+    const glm::vec3 subintervalLen = computePrimitiveCentroid(primitives[i]) - computePrimitiveCentroid(primitives[0]);
+    const glm::vec3 intervalLen = computePrimitiveCentroid(primitives[primitives.size() - 1]) - computePrimitiveCentroid(primitives[0]);
+
+    size_t idx;
+    if (axis == 0)
+    {
+        idx = nBins * (subintervalLen.x) / (intervalLen.x);
+    }
+    else if (axis == 1)
+    {
+        idx = nBins*(subintervalLen.y) / (intervalLen.y);
+    } 
+    else 
+    {
+        idx = nBins*(subintervalLen.z) / (intervalLen.z);
+    }
+
+    // Clamp the index to not get out of bounds
+    if (idx == nBins) 
+    {
+        idx--;
+    }
+    return idx;
+}
+
+float calculateAABBSurfaceArea(const AxisAlignedBox& aabb)
+{
+    const glm::vec3 axes = glm::abs(aabb.upper - aabb.lower);
+    return 2 * (axes.x * axes.y + axes.x * axes.z + axes.y * axes.z);
+}
 
 // TODO: Extra feature
 // As an alternative to `splitPrimitivesByMedian`, use a SAH+binning splitting criterion. Refer to
@@ -412,7 +440,78 @@ glm::vec3 sampleEnvironmentMap(RenderState& state, Ray ray)
 // This method is unit-tested, so do not change the function signature.
 size_t splitPrimitivesBySAHBin(const AxisAlignedBox& aabb, uint32_t axis, std::span<BVH::Primitive> primitives)
 {
+    /*
+       SOURCES:
+       Surface area heuristic with binning: M. Pharr, J. Wenzel, and G. Humphreys. Physically Based Rendering, Second Edition: 
+       From Theory To Implementation. Morgan Kaufmann Publishers Inc., 2nd edition, chapter 4.4.2.
+
+       General information: TU Delft Computer Graphics course, lecture 9.
+    */
     using Primitive = BVH::Primitive;
 
-    return 0; // This is clearly not the solution
+    const size_t N = primitives.size();
+    size_t nBins = 50;
+
+    if (N < nBins)
+    {
+        nBins = N;
+    }
+
+    // Sort
+    splitPrimitivesByMedian(aabb, axis, primitives);
+
+    std::vector<BVH::Bin> bins;
+    bins.resize(nBins);
+
+    // Assign each primitive to a bin
+    for (size_t i = 0; i < N; i++)
+    {
+        const size_t bIndex = determineBucketIndex(i, nBins, axis, primitives);
+        bins[bIndex].binPrimitives.push_back(primitives[i]);
+    }
+
+    // Determine where each bin starts
+    size_t relStart = 0;
+    for (size_t i = 0; i < nBins; i++)
+    {
+        bins[i].start = relStart;
+        relStart += bins[i].binPrimitives.size();
+    }
+
+    const float outerSurfaceArea = calculateAABBSurfaceArea(aabb);
+
+    float minCost = std::numeric_limits<float>::max();
+    size_t minIndex = -1;
+    
+    // Intersection cost is assumed to be 1 for all calculations below
+    const float baseCost = N;
+
+    // Traversal cost can be tuned to get the best results
+    const float travCost = 1.5f;
+    
+    // Finding min cost by considering splits after each bucket
+    for (size_t i = 0; i < nBins - 1; i++) 
+    {
+        // Left subdivision
+        const size_t leftSize = bins[i + 1].start;
+        const float leftSurfaceArea = calculateAABBSurfaceArea(computeSpanAABB(primitives.subspan(0, leftSize)));
+
+        // Right subdivision
+        const size_t rightSize = N - leftSize;
+        const float rightSurfaceArea = calculateAABBSurfaceArea(computeSpanAABB(primitives.subspan(leftSize, rightSize)));
+
+        const float cost = travCost + (leftSurfaceArea * leftSize + rightSurfaceArea * rightSize) / outerSurfaceArea;
+        if (cost < minCost) 
+        {
+            minCost = cost;
+            minIndex = leftSize;
+        }
+    }
+
+    if (minCost >= baseCost)
+    {
+        return -1;
+    }
+
+    return minIndex;
 }

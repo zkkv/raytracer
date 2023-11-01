@@ -5,6 +5,7 @@
 #include "shading.h"
 #include <framework/trackball.h>
 #include "texture.h"
+#include <iostream>
 
 // TODO; Extra feature
 // Given the same input as for `renderImage()`, instead render an image with your own implementation
@@ -78,7 +79,8 @@ void renderRayGlossyComponent(RenderState& state, Ray ray, const HitInfo& hitInf
 glm::vec3 sampleEnvironmentMap(RenderState& state, Ray ray)
 {
     if (state.features.extra.enableEnvironmentMap) {
-        float maxComponent = std::max(ray.direction.x, std::max(ray.direction.y, ray.direction.z));
+        float x = std::fabs(ray.direction.x), y = std::fabs(ray.direction.y), z = std::fabs(ray.direction.z);
+        float maxComponent = std::max(x, std::max(y, z));
         glm::vec3 r = ray.direction / maxComponent; // [-1, 1]
         glm::vec3 coords = (r + glm::vec3(1.0f)) / 2.0f; // [0, 1]
 
@@ -87,27 +89,34 @@ glm::vec3 sampleEnvironmentMap(RenderState& state, Ray ray)
         float one = 1.0f - FLT_EPSILON;
         float u, v;
         
-        // texture is 4 squares wide and 3 squares high
+        /* texture is 4 squares wide and 3 squares:
+
+                   UP
+            LEFT FRONT RIGHT BACK
+                  DOWN
+        */
+        // Some 'coords' components need to be flipped to account for the way a cube is unfolded onto a flat plane (some faces are inverted)
         if (r.x > one) { // right
-            u = coords.z / 4.0f;
+            u = coords.z / 4.0f + 2.0f / 4.0f;
             v = coords.y / 3.0f + 1.0f / 3.0f;
         } else if (r.x < -one) { // left
-            u = coords.z / 4.0f + 2.0f / 4.0f;
+            u = (1 - coords.z) / 4.0f;
             v = coords.y / 3.0f + 1.0f / 3.0f;
         } else if (r.y > one) { // up
             u = coords.x / 4.0f + 1.0f / 4.0f;
             v = coords.z / 3.0f + 2.0f / 3.0f;
         } else if (r.y < -one) { // down
             u = coords.x / 4.0f + 1.0f / 4.0f;
-            v = coords.z / 3.0f;
+            v = (1 - coords.z) / 3.0f;
         } else if (r.z < -one) { // front
             u = coords.x / 4.0f + 1.0f / 4.0f;
             v = coords.y / 3.0f + 1.0f / 3.0f;
         } else /*if (r.z > one)*/ { // back
-            u = coords.x / 4.0f + 3.0f / 4.0f;
+            u = (1 - coords.x) / 4.0f + 3.0f / 4.0f;
             v = coords.y / 3.0f + 1.0f / 3.0f;
         }
-        
+        if (u < 0.0f || u > 1.0f || v < 0.0f || v > 1.0f)
+            std::cout << "OUT OF BOUNDS\n";
         glm::vec2 mapTexCoords = glm::vec2(u, v);
 
         if (state.features.enableBilinearTextureFiltering) 

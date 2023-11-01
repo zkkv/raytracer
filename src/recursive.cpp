@@ -159,5 +159,5 @@ void renderRayTransparentComponent(RenderState& state, Ray ray, const HitInfo& h
 
     glm::vec3 passthroughColor = renderRay(state, r, rayDepth + 1);
 
-    hitColor += passthroughColor * (1.f - hitInfo.material.transparency);
+    hitColor = hitColor * (1.f - hitInfo.material.transparency) + passthroughColor * hitInfo.material.transparency;
 }

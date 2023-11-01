@@ -86,10 +86,6 @@ glm::vec3 sampleEnvironmentMap(RenderState& state, Ray ray)
         // take other 2 coords and sample from face
         float one = 1.0f - FLT_EPSILON;
         float u, v;
-
-        // Remove this, only for debugging
-        u = 0.5f;
-        v = 0.5f;
         
         // texture is 4 squares wide and 3 squares high
         if (r.x > one) { // right
@@ -100,19 +96,19 @@ glm::vec3 sampleEnvironmentMap(RenderState& state, Ray ray)
             v = coords.y / 3.0f + 1.0f / 3.0f;
         } else if (r.y > one) { // up
             u = coords.x / 4.0f + 1.0f / 4.0f;
-            v = coords.z / 3.0f + 2.0f / 3.0f; // TODO 1-
+            v = coords.z / 3.0f + 2.0f / 3.0f;
         } else if (r.y < -one) { // down
             u = coords.x / 4.0f + 1.0f / 4.0f;
             v = coords.z / 3.0f;
         } else if (r.z < -one) { // front
             u = coords.x / 4.0f + 1.0f / 4.0f;
             v = coords.y / 3.0f + 1.0f / 3.0f;
-        } else if (r.z > one) { // back
-            u = coords.x / 4.0f + 3.0f / 4.0f; // TODO 1-
+        } else /*if (r.z > one)*/ { // back
+            u = coords.x / 4.0f + 3.0f / 4.0f;
             v = coords.y / 3.0f + 1.0f / 3.0f;
         }
         
-        glm::vec2 mapTexCoords = glm::vec2(u, 1.0f-v); // change to (u, v), currently textures are flipped
+        glm::vec2 mapTexCoords = glm::vec2(u, v);
 
         if (state.features.enableBilinearTextureFiltering) 
             return sampleTextureBilinear(state.scene.environmentMap, mapTexCoords);

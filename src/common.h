@@ -82,10 +82,7 @@ struct ExtraFeatures {
     // Parameters for glossy reflection
     uint32_t numGlossySamples = 1;
 
-    bool enableObjectMovement = false;    
-    float timeIncrement = 0.f;
-    float time = 0.f;
-
+    int numMotionBlurSamples = 2;
 };
 
 struct Features {

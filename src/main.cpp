@@ -210,8 +210,7 @@ int main(int argc, char** argv)
                 if (config.features.extra.enableMotionBlur) {
                     ImGui::Indent();
                     // Add motion blur settings here, if necessary
-                    config.features.extra.enableObjectMovement = true; //always make the object move when enabling motion blur
-                    config.features.extra.timeIncrement = 1.f;
+                    ImGui::SliderInt("Motion blur samples", &config.features.extra.numMotionBlurSamples, 2, 64);
                     ImGui::Unindent();
                 }
                 ImGui::Checkbox("Glossy reflections", &config.features.extra.enableGlossyReflection);
@@ -291,10 +290,6 @@ int main(int argc, char** argv)
                 ImGui::Checkbox("Show blurred mask", &config.features.extra.enableBloomShowBlurredMask);
                 ImGui::Spacing();
             }
-
-            ImGui::Checkbox("Enable object movement", &config.features.extra.enableObjectMovement);
-            if (config.features.extra.enableObjectMovement)
-                ImGui::SliderFloat("Time increment", &config.features.extra.timeIncrement, -5.f, 5.f);
 
             ImGui::Spacing();
             ImGui::Separator();

@@ -39,9 +39,11 @@ void sampleSegmentLight(const float& sample, const SegmentLight& light, glm::vec
 // This method is unit-tested, so do not change the function signature.
 void sampleParallelogramLight(const glm::vec2& sample, const ParallelogramLight& light, glm::vec3& position, glm::vec3& color)
 {
+    // Concept: Marschner, S.; Shirley, P. Fundamentals of Computer Graphics, Fourth.; CRC Press, Taylor & Francis Group: Boca Raton, FL, 2015, chapter 13.4.2.
     position = light.v0 + sample[0] * light.edge01 + sample[1] * light.edge02;
 
     // Since sample is between (0,0), (1,1), we can treat the light as a unit square, with our sampled point at coordinates (sample[0], sample[1])
+    // Idea from: https://en.wikipedia.org/wiki/Bilinear_interpolation#Inverse_and_generalization
     float a0 = (1.0f - sample[0]) * (1.0f - sample[1]);
     float a1 = (1.0f - sample[0]) * sample[1];
     float a2 = sample[0] * (1.0f - sample[1]);

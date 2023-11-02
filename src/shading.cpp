@@ -186,6 +186,7 @@ glm::vec3 LinearGradient::sample(float ti) const
 {
     std::vector<LinearGradient::Component> componentsCopy = components;
 
+    // Concept of using a comparator to sort a custom vector: https://www.geeksforgeeks.org/sort-vector-of-pairs-in-ascending-order-in-c/
     std::sort(componentsCopy.begin(), componentsCopy.end(), componentsComparator);
 
     if (componentsCopy[0].t > ti)

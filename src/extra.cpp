@@ -5,8 +5,8 @@
 #include "shading.h"
 #include "draw.h"
 #include <framework/trackball.h>
+#include "texture.h"
 #include <iostream>
-
 
 // TODO; Extra feature
 // Given the same input as for `renderImage()`, instead render an image with your own implementation
@@ -389,9 +389,54 @@ void renderRayGlossyComponent(RenderState& state, Ray ray, const HitInfo& hitInf
 // not go on a hunting expedition for your implementation, so please keep it here!
 glm::vec3 sampleEnvironmentMap(RenderState& state, Ray ray)
 {
+    // Concept + reason for choosing a cube map over a sphere map: 
+    // Marschner, S.; Shirley, P. Fundamentals of Computer Graphics, Fourth.; CRC Press, Taylor & Francis Group: Boca Raton, FL, 2015, chapter 11.4.5
     if (state.features.extra.enableEnvironmentMap) {
-        // Part of your implementation should go here
-        return glm::vec3(0.f);
+        float x = std::fabs(ray.direction.x), y = std::fabs(ray.direction.y), z = std::fabs(ray.direction.z);
+        float maxComponent = std::max(x, std::max(y, z));
+        glm::vec3 r = ray.direction / maxComponent; // [-1, 1]
+        glm::vec3 coords = (r + glm::vec3(1.0f)) / 2.0f; // [0, 1]
+
+        // +- 1 => choose face
+        // take other 2 coords and sample from face
+        // Source: McGill University Slides - https://www.cim.mcgill.ca/~langer/557/18-slides.pdf
+        float one = 1.0f - FLT_EPSILON;
+        float u, v;
+        
+        /* texture is 4 squares wide and 3 squares: (see data/cube2.jpg)
+
+                   UP
+            LEFT FRONT RIGHT BACK
+                  DOWN
+        */
+        // Some 'coords' components need to be flipped to account for the way a cube is unfolded onto a flat plane (some faces are inverted)
+        if (r.x > one) { // right
+            u = coords.z / 4.0f + 2.0f / 4.0f;
+            v = coords.y / 3.0f + 1.0f / 3.0f;
+        } else if (r.x < -one) { // left
+            u = (1 - coords.z) / 4.0f;
+            v = coords.y / 3.0f + 1.0f / 3.0f;
+        } else if (r.y > one) { // up
+            u = coords.x / 4.0f + 1.0f / 4.0f;
+            v = coords.z / 3.0f + 2.0f / 3.0f;
+        } else if (r.y < -one) { // down
+            u = coords.x / 4.0f + 1.0f / 4.0f;
+            v = (1 - coords.z) / 3.0f;
+        } else if (r.z < -one) { // front
+            u = coords.x / 4.0f + 1.0f / 4.0f;
+            v = coords.y / 3.0f + 1.0f / 3.0f;
+        } else /*if (r.z > one)*/ { // back
+            u = (1 - coords.x) / 4.0f + 3.0f / 4.0f;
+            v = coords.y / 3.0f + 1.0f / 3.0f;
+        }
+
+        glm::vec2 mapTexCoords = glm::vec2(u, v);
+
+        if (state.features.enableBilinearTextureFiltering) 
+            return sampleTextureBilinear(state.scene.environmentMap, mapTexCoords);
+
+        return sampleTextureNearest(state.scene.environmentMap, mapTexCoords);
+
     } else {
         return glm::vec3(0.f);
     }

@@ -20,7 +20,48 @@ void renderImageWithDepthOfField(const Scene& scene, const BVHInterface& bvh, co
         return;
     }
 
-    // ...
+    float focalLength = /*features.extra.focalLength*/ 5.0f;
+    float width = screen.resolution().x, height = screen.resolution().y;
+
+    // TODO play around with default values, add aperture, add sliders for debug
+
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            std::vector<Ray> rays;
+            float ndcX = (x / width) * 2.0f - 1.0f; // in [-1, 1]
+            float ndcY = (y / height) * 2.0f - 1.0f; 
+            glm::vec2 pixel = glm::vec2(ndcX, ndcY);
+
+            RenderState state = {
+                .scene = scene,
+                .features = features,
+                .bvh = bvh,
+                .sampler = { static_cast<uint32_t>(screen.resolution().y * x + y) }
+            };
+
+            for (int i = 0; i < /*features.extra.depthOfFieldSamples*/ 10; i++) {
+                glm::vec2 sample = state.sampler.next_2d();
+
+                // Calculate new origin with offset (treat camera as a (square) lens instead of a point)
+                glm::vec3 offset = glm::vec3(sample, 0.0f);
+
+                // Ray from camera to pixel
+                Ray ray = camera.generateRay(pixel);
+                
+                // Intersection point on focal plane
+                glm::vec3 focusPoint = ray.origin + focalLength * ray.direction;
+
+                ray.origin = ray.origin + offset;
+                ray.direction = glm::normalize(focusPoint - ray.origin);
+
+                rays.push_back(ray);
+            }
+
+            glm::vec3 avgColor = renderRays(state, rays);
+
+            screen.setPixel(x, y, avgColor);
+        }
+    }
 }
 
 // TODO; Extra feature

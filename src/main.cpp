@@ -291,6 +291,15 @@ int main(int argc, char** argv)
                 ImGui::Spacing();
             }
 
+            if (config.features.extra.enableMotionBlur) {
+                ImGui::Spacing();
+                ImGui::Checkbox("Enable motion blur sample isolation (Requires Raytracing)", &config.features.extra.enableMotionBlurSampleIsolation);
+                if (config.features.extra.enableMotionBlurSampleIsolation) {
+                    ImGui::SliderInt("Sample number", &config.features.extra.numMotionBlurSampleIsolated, 1, config.features.extra.numMotionBlurSamples);
+                }
+                ImGui::Spacing();
+            }
+
             ImGui::Spacing();
             ImGui::Separator();
             ImGui::Text("Lights");

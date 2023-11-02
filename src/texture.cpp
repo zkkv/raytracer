@@ -86,36 +86,6 @@ glm::vec3 sampleTextureBilinear(const Image& image, const glm::vec2& texCoord)
         yCoordBL = image.height - 1;
     yCoordBR = yCoordBL;
 
-    /* OLD, INCORRECT IMPLEMENTATION:
-    int xCoordTL = glm::floor(texCoord[0] * image.width);
-    if (xCoordTL > image.width)
-        xCoordTL = image.width - 1;
-    int yCoordTL = glm::ceil(texCoord[1] * image.height);
-    if (yCoordTL > image.height)
-        yCoordTL = image.height - 1;
-
-    int xCoordTR = glm::ceil(texCoord[0] * image.width);
-    if (xCoordTR > image.width)
-        xCoordTR = image.width - 1;
-    int yCoordTR = glm::ceil(texCoord[1] * image.height);
-    if (yCoordTR > image.height)
-        yCoordTR = image.height - 1;
-
-    int xCoordBL = glm::floor(texCoord[0] * image.width);
-    if (xCoordBL > image.width)
-        xCoordBL = image.width - 1;
-    int yCoordBL = glm::floor(texCoord[1] * image.height);
-    if (yCoordBL > image.height)
-        yCoordBL = image.height - 1;
-
-    int xCoordBR = glm::ceil(texCoord[0] * image.width);
-    if (xCoordBR > image.width)
-        xCoordBR = image.width - 1;
-    int yCoordBR = glm::floor(texCoord[1] * image.height);
-    if (yCoordBR > image.height)
-        yCoordBR = image.height - 1;
-    */
-
     // Coordinates of the point we interpolate for
     
     float xCoord = texCoord[0] * image.width;

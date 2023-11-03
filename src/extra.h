@@ -5,6 +5,7 @@
 #include "render.h"
 #include "scene.h"
 #include "screen.h"
+#include "bvh.h"
 
 // TODO; Extra feature
 // Given the same input as for `renderImage()`, instead render an image with your own implementation
@@ -47,6 +48,10 @@ void renderRayGlossyComponent(RenderState& state, Ray ray, const HitInfo& hitInf
 // This method is not unit-tested, but we do expect to find it **exactly here**, and we'd rather
 // not go on a hunting expedition for your implementation, so please keep it here!
 glm::vec3 sampleEnvironmentMap(RenderState& state, Ray ray);
+
+size_t determineBucketIndex(const size_t i, const size_t nBins, uint32_t axis, std::span<BVH::Primitive> primitives);
+
+float calculateAABBSurfaceArea(const AxisAlignedBox& aabb);
 
 // TODO: Extra feature
 // As an alternative to `splitPrimitivesByMedian`, use a SAH+binning splitting criterion. Refer to

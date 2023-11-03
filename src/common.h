@@ -53,7 +53,7 @@ struct SegmentLight {
 };
 
 struct ParallelogramLight {
-    // A parallelogram light (see figure 3.14 of chapter 13.4.2 of Fundamentals of CG 4th Edition)
+    // A parallelogram light (see figure 13.14 of chapter 13.4.2 of Fundamentals of CG 4th Edition)
     glm::vec3 v0; // v0
     glm::vec3 edge01, edge02; // edges from v0 to v1, and from v0 to v2
     glm::vec3 color0, color1, color2, color3;
@@ -68,9 +68,29 @@ struct ExtraFeatures {
     bool enableMipmapTextureFiltering = false;
     bool enableMotionBlur = false;
 
+    bool enableSahBinningDebug = false;
+    bool storeSplitData = true;
+    int debugSAHNodeIndex = 0;
+    int debugSAHBinNumber = 0;
+
+    bool enableBloomShowAboveThreshold = false;
+    bool enableBloomShowBlurredMask = false;
+    uint32_t bloomFilterSize = 15;
+    float bloomFilterThreshold = 0.5f;
+    float bloomFilterIntensity = 0.8f;
+
     // Parameters for glossy reflection
     uint32_t numGlossySamples = 1;
 
+    int numMotionBlurSamples = 2;
+
+    bool enableMotionBlurSampleIsolation = false;
+    int numMotionBlurSampleIsolated = 1;
+
+    // Parameters for depth of field
+    float focalLength = 1.8f;
+    float aperture = 10.0f;
+    int depthOfFieldNumSamples = 15;
 };
 
 struct Features {

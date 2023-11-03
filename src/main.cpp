@@ -132,6 +132,15 @@ int main(int argc, char** argv)
                         RenderState state = { .scene = scene, .features = config.features, .bvh = bvh, .sampler = { debugRaySeed } };
                         renderRays(state, debugRays);
                     }
+                    std::cout << "Scene: " << items[sceneType] << "\n";
+                    uint32_t nTriangles = 0;
+                    for (const auto& mesh : scene.meshes)
+                    {
+                        nTriangles += mesh.triangles.size();
+                    }
+                    std::cout << "Number of triangles (primitives): " << nTriangles << "\n";
+                    std::cout << "Number of BVH tree levels: " << bvh.numLevels() << "\n";
+                    std::cout << "Number of BVH tree leaves: " << bvh.numLeaves() << "\n\n" << std::flush;
                 }
             }
             {
@@ -185,18 +194,26 @@ int main(int argc, char** argv)
                 if (config.features.extra.enableBloomEffect) {
                     ImGui::Indent();
                     // Add bloom settings here, if necessary
+                    uint32_t minSize = 1, maxSize = 30;
+                    ImGui::SliderScalar("Filter size", ImGuiDataType_U32, &config.features.extra.bloomFilterSize, &minSize, &maxSize);
+                    ImGui::SliderFloat("Threshold", &config.features.extra.bloomFilterThreshold, 0.0f, 1.0f);
+                    ImGui::SliderFloat("Intensity", &config.features.extra.bloomFilterIntensity, 0.0f, 1.0f);
                     ImGui::Unindent();
                 }
                 ImGui::Checkbox("Depth of field", &config.features.extra.enableDepthOfField);
                 if (config.features.extra.enableDepthOfField) {
                     ImGui::Indent();
                     // Add DOF settings here, if necessary
+                    ImGui::SliderFloat("Focal Length", &config.features.extra.focalLength, 1, 20);
+                    ImGui::SliderFloat("Aperture", &config.features.extra.aperture, 1, 50);
+                    ImGui::SliderInt("Ray samples", &config.features.extra.depthOfFieldNumSamples, 2, 64);
                     ImGui::Unindent();
                 }
                 ImGui::Checkbox("Motion blur", &config.features.extra.enableMotionBlur);
                 if (config.features.extra.enableMotionBlur) {
                     ImGui::Indent();
                     // Add motion blur settings here, if necessary
+                    ImGui::SliderInt("Motion blur samples", &config.features.extra.numMotionBlurSamples, 2, 64);
                     ImGui::Unindent();
                 }
                 ImGui::Checkbox("Glossy reflections", &config.features.extra.enableGlossyReflection);
@@ -254,6 +271,36 @@ int main(int argc, char** argv)
                 ImGui::Checkbox("Draw BVH Leaf", &debugBVHLeaf);
                 if (debugBVHLeaf)
                     ImGui::SliderInt("BVH Leaf", &bvhDebugLeaf, 1, bvh.numLeaves());
+                ImGui::Checkbox("Draw SAH Bins", &config.features.extra.enableSahBinningDebug);
+                if (config.features.extra.enableSahBinningDebug)
+                {
+                    ImGui::SliderInt("SAH Node Index", &config.features.extra.debugSAHNodeIndex, 0, bvh.nodes().size());
+
+                    int maxBinNum = bvh.numberOfBinsInNode(config.features.extra.debugSAHNodeIndex) - 2;
+                    if (maxBinNum != -1)
+                    {
+                        ImGui::SliderInt("SAH Bin Number", &config.features.extra.debugSAHBinNumber, 0, maxBinNum);
+                    }
+                    
+                }
+                    
+            }
+            if (config.features.extra.enableBloomEffect)
+            {
+                ImGui::Spacing();
+                ImGui::Text("Bloom: use one option at a time");
+                ImGui::Checkbox("Show values above threshold", &config.features.extra.enableBloomShowAboveThreshold);
+                ImGui::Checkbox("Show blurred mask", &config.features.extra.enableBloomShowBlurredMask);
+                ImGui::Spacing();
+            }
+
+            if (config.features.extra.enableMotionBlur) {
+                ImGui::Spacing();
+                ImGui::Checkbox("Enable motion blur sample isolation (Requires Raytracing)", &config.features.extra.enableMotionBlurSampleIsolation);
+                if (config.features.extra.enableMotionBlurSampleIsolation) {
+                    ImGui::SliderInt("Sample number", &config.features.extra.numMotionBlurSampleIsolated, 1, config.features.extra.numMotionBlurSamples);
+                }
+                ImGui::Spacing();
             }
 
             ImGui::Spacing();
@@ -391,7 +438,7 @@ int main(int argc, char** argv)
 
                 drawLightsOpenGL(scene, camera, selectedLightIdx);
 
-                if (debugBVHLevel || debugBVHLeaf) {
+                if (debugBVHLevel || debugBVHLeaf || config.features.extra.enableSahBinningDebug) {
                     glPushAttrib(GL_ALL_ATTRIB_BITS);
                     setOpenGLMatrices(camera);
                     glDisable(GL_LIGHTING);
@@ -406,6 +453,8 @@ int main(int argc, char** argv)
                         bvh.debugDrawLevel(bvhDebugLevel);
                     if (debugBVHLeaf)
                         bvh.debugDrawLeaf(bvhDebugLeaf);
+                    if (config.features.extra.enableSahBinningDebug)
+                        bvh.debugSAHBins(config.features, config.features.extra.debugSAHNodeIndex);
                     enableDebugDraw = false;
                     glPopAttrib();
                 }

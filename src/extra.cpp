@@ -16,20 +16,24 @@
 // not go on a hunting expedition for your implementation, so please keep it here!
 void renderImageWithDepthOfField(const Scene& scene, const BVHInterface& bvh, const Features& features, const Trackball& camera, Screen& screen)
 {
+    // Concept: Marschner, S.; Shirley, P. Fundamentals of Computer Graphics, Fourth.; CRC Press, Taylor & Francis Group: Boca Raton, FL, 2015, chapter 13.4.3
+
     if (!features.extra.enableDepthOfField) {
         return;
     }
 
-    float focalLength = /*features.extra.focalLength*/ 5.0f;
     float width = screen.resolution().x, height = screen.resolution().y;
+    float focalLength = features.extra.focalLength;
+    float aperture = features.extra.aperture;
 
-    // TODO play around with default values, add aperture, add sliders for debug
 
     for (int y = 0; y < height; y++) {
         for (int x = 0; x < width; x++) {
             std::vector<Ray> rays;
-            float ndcX = (x / width) * 2.0f - 1.0f; // in [-1, 1]
-            float ndcY = (y / height) * 2.0f - 1.0f; 
+
+            // find NDC space x and y s.t. they give the coordinates of the center of pixel (x,y)
+            float ndcX = ((x + 0.5f) / width) * 2.0f - 1.0f; // in [-1, 1]
+            float ndcY = ((y + 0.5f) / height) * 2.0f - 1.0f; 
             glm::vec2 pixel = glm::vec2(ndcX, ndcY);
 
             RenderState state = {
@@ -39,11 +43,16 @@ void renderImageWithDepthOfField(const Scene& scene, const BVHInterface& bvh, co
                 .sampler = { static_cast<uint32_t>(screen.resolution().y * x + y) }
             };
 
-            for (int i = 0; i < /*features.extra.depthOfFieldSamples*/ 10; i++) {
-                glm::vec2 sample = state.sampler.next_2d();
+            for (int i = 0; i < features.extra.depthOfFieldNumSamples; i++) {
+                glm::vec2 sample = state.sampler.next_2d(); // in [0, 1]
+                sample -= glm::vec2(0.5f); // in [-0.5, 0.5], to allow for negative offsets as well
+
+                // offset by some random amount of pixels proportional to aperture
+                float offsetX = aperture * sample.x / width;
+                float offsetY = aperture * sample.y / height; 
 
                 // Calculate new origin with offset (treat camera as a (square) lens instead of a point)
-                glm::vec3 offset = glm::vec3(sample, 0.0f);
+                glm::vec3 offset = glm::vec3(offsetX, offsetY, 0.0f) ;
 
                 // Ray from camera to pixel
                 Ray ray = camera.generateRay(pixel);
@@ -52,6 +61,8 @@ void renderImageWithDepthOfField(const Scene& scene, const BVHInterface& bvh, co
                 glm::vec3 focusPoint = ray.origin + focalLength * ray.direction;
 
                 ray.origin = ray.origin + offset;
+                glm::clamp(ray.origin, glm::vec3(-1, -1, 0), glm::vec3(1, 1, 0)); // don't exit NDC space
+
                 ray.direction = glm::normalize(focusPoint - ray.origin);
 
                 rays.push_back(ray);

@@ -204,6 +204,9 @@ int main(int argc, char** argv)
                 if (config.features.extra.enableDepthOfField) {
                     ImGui::Indent();
                     // Add DOF settings here, if necessary
+                    ImGui::SliderFloat("Focal Length", &config.features.extra.focalLength, 1, 20);
+                    ImGui::SliderFloat("Aperture", &config.features.extra.aperture, 1, 50);
+                    ImGui::SliderInt("Ray samples", &config.features.extra.depthOfFieldNumSamples, 2, 64);
                     ImGui::Unindent();
                 }
                 ImGui::Checkbox("Motion blur", &config.features.extra.enableMotionBlur);

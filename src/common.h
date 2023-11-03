@@ -86,6 +86,11 @@ struct ExtraFeatures {
 
     bool enableMotionBlurSampleIsolation = false;
     int numMotionBlurSampleIsolated = 1;
+
+    // Parameters for depth of field
+    float focalLength = 1.8f;
+    float aperture = 10.0f;
+    int depthOfFieldNumSamples = 15;
 };
 
 struct Features {

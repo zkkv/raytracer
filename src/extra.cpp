@@ -76,6 +76,91 @@ void renderImageWithMotionBlur(const Scene& scene, const BVHInterface& bvh, cons
         return;
     }
 
+    std::vector<glm::vec3> pixels(screen.resolution().x * screen.resolution().y, glm::vec3 { 0.f, 0.f, 0.f });
+    
+    if (!features.extra.enableMotionBlurSampleIsolation) {
+
+        for (int i = 0; i < features.extra.numMotionBlurSamples; i++) {
+
+            Scene newScene = scene;
+
+            float time = (float)i / (features.extra.numMotionBlurSamples - 1.f) * 0.05f; // take samples uniformly, always in the same interval [0,1]
+            for (Mesh& mesh : newScene.meshes) {
+                for (Vertex& vertex : mesh.vertices) {
+                    vertex.position[0] += time;
+                    vertex.position[1] += -4.f * time * time * time + 0.5f * time * time + 1.5f * time; // curve of third degree polynomial = -4 * x^3 + 0.5 * x^2 + 1.5 * x
+                }
+            }
+            for (Sphere& sphere : newScene.spheres) {
+                sphere.center[0] += time;
+                sphere.center[1] += -4.f * time * time * time + 0.5f * time * time + 1.5f * time; // curve of third degree polynomial = -4 * x^3 + 0.5 * x^2 + 1.5 * x
+            }
+
+            BVH newBVH = BVH(newScene, features);
+
+            for (int y = 0; y < screen.resolution().y; y++) {
+                for (int x = 0; x != screen.resolution().x; x++) {
+                    // Assemble useful objects on a per-pixel basis; e.g. a per-thread sampler
+                    // Note; we seed the sampler for consistenct behavior across frames
+                    RenderState state = {
+                        .scene = newScene,
+                        .features = features,
+                        .bvh = newBVH,
+                        .sampler = { static_cast<uint32_t>(screen.resolution().y * x + y) }
+                    };
+                    auto rays = generatePixelRays(state, camera, { x, y }, screen.resolution());
+                    auto L = renderRays(state, rays);
+                    pixels[screen.resolution().x * y + x] += L;
+            }
+        }
+    }
+
+        for (int x = 0; x < screen.resolution().x; x++)
+            for (int y = 0; y < screen.resolution().y; y++) {
+                pixels[screen.resolution().x * y + x][0] /= (float)features.extra.numMotionBlurSamples;
+                pixels[screen.resolution().x * y + x][1] /= (float)features.extra.numMotionBlurSamples;
+                pixels[screen.resolution().x * y + x][2] /= (float)features.extra.numMotionBlurSamples;
+
+                screen.setPixel(x, y, pixels[screen.resolution().x * y + x]);
+            }
+    }
+    
+    else {
+
+        Scene newScene = scene;
+
+        float time = (features.extra.numMotionBlurSampleIsolated - 1) / (features.extra.numMotionBlurSamples - 1.f) * 0.05f;
+        // loop starts counting from 0, feature starts from 1, so we subtract 1
+
+        for (Mesh& mesh : newScene.meshes) {
+            for (Vertex& vertex : mesh.vertices) {
+                vertex.position[0] += time;
+                vertex.position[1] += -4.f * time * time * time + 0.5f * time * time + 1.5f * time; // curve of third degree polynomial = -4 * x^3 + 0.5 * x^2 + 1.5 * x
+            }
+        }
+        for (Sphere& sphere : newScene.spheres) {
+            sphere.center[0] += time;
+            sphere.center[1] += -4.f * time * time * time + 0.5f * time * time + 1.5f * time; // curve of third degree polynomial = -4 * x^3 + 0.5 * x^2 + 1.5 * x
+        }
+
+        BVH newBVH = BVH(newScene, features);
+
+        for (int y = 0; y < screen.resolution().y; y++) {
+            for (int x = 0; x != screen.resolution().x; x++) {
+                // Assemble useful objects on a per-pixel basis; e.g. a per-thread sampler
+                // Note; we seed the sampler for consistenct behavior across frames
+                RenderState state = {
+                    .scene = newScene,
+                    .features = features,
+                    .bvh = newBVH,
+                    .sampler = { static_cast<uint32_t>(screen.resolution().y * x + y) }
+                };
+                auto rays = generatePixelRays(state, camera, { x, y }, screen.resolution());
+                auto L = renderRays(state, rays);
+                screen.setPixel(x, y, L);
+            }
+        }
+    }
 }
 
 float perceivedLuminance(glm::vec3 colors)

@@ -210,6 +210,7 @@ int main(int argc, char** argv)
                 if (config.features.extra.enableMotionBlur) {
                     ImGui::Indent();
                     // Add motion blur settings here, if necessary
+                    ImGui::SliderInt("Motion blur samples", &config.features.extra.numMotionBlurSamples, 2, 64);
                     ImGui::Unindent();
                 }
                 ImGui::Checkbox("Glossy reflections", &config.features.extra.enableGlossyReflection);
@@ -287,6 +288,15 @@ int main(int argc, char** argv)
                 ImGui::Text("Bloom: use one option at a time");
                 ImGui::Checkbox("Show values above threshold", &config.features.extra.enableBloomShowAboveThreshold);
                 ImGui::Checkbox("Show blurred mask", &config.features.extra.enableBloomShowBlurredMask);
+                ImGui::Spacing();
+            }
+
+            if (config.features.extra.enableMotionBlur) {
+                ImGui::Spacing();
+                ImGui::Checkbox("Enable motion blur sample isolation (Requires Raytracing)", &config.features.extra.enableMotionBlurSampleIsolation);
+                if (config.features.extra.enableMotionBlurSampleIsolation) {
+                    ImGui::SliderInt("Sample number", &config.features.extra.numMotionBlurSampleIsolated, 1, config.features.extra.numMotionBlurSamples);
+                }
                 ImGui::Spacing();
             }
 
